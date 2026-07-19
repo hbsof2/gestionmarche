@@ -1,12 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Package } from "lucide-react";
+import { Plus, Package, Tag } from "lucide-react";
 import RawMaterialsList from "./RawMaterialsList";
 import RawMaterialForm from "./RawMaterialForm";
 import RawMaterialDeleteModal from "./RawMaterialDeleteModal";
+import MaterialCategoriesPage from "./categories/MaterialCategoriesPage";
 import { getAll, create, update, remove } from "@/services/rawMaterialsService";
 
 export default function RawMaterialsPage({ activeService, onServiceChange }) {
+  const [showCategories, setShowCategories] = useState(false);
   const [materials, setMaterials] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0, limit: 10 });
   const [loading, setLoading] = useState(false);
@@ -98,6 +100,28 @@ export default function RawMaterialsPage({ activeService, onServiceChange }) {
     }
   };
 
+  if (showCategories) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowCategories(false)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-100 transition-colors border border-slate-200"
+          >
+            <Package size={15} />
+            المواد الأولية
+          </button>
+          <span className="text-slate-300 text-sm">/</span>
+          <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+            <Tag size={14} style={{ color: "#2D7A4F" }} />
+            أصناف المواد الأولية
+          </span>
+        </div>
+        <MaterialCategoriesPage />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
 
@@ -117,14 +141,24 @@ export default function RawMaterialsPage({ activeService, onServiceChange }) {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => { setEditMaterial(null); setFormOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium shadow-sm hover:opacity-90 transition-opacity shrink-0"
-          style={{ backgroundColor: "#2D7A4F" }}
-        >
-          <Plus size={16} />
-          إضافة مادة جديدة
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowCategories(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors shrink-0"
+            style={{ borderColor: "#2D7A4F", color: "#2D7A4F" }}
+          >
+            <Tag size={15} />
+            أصناف المواد الأولية
+          </button>
+          <button
+            onClick={() => { setEditMaterial(null); setFormOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium shadow-sm hover:opacity-90 transition-opacity shrink-0"
+            style={{ backgroundColor: "#2D7A4F" }}
+          >
+            <Plus size={16} />
+            إضافة مادة جديدة
+          </button>
+        </div>
       </div>
 
       {/* List */}

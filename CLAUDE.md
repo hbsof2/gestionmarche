@@ -30,8 +30,12 @@ cd backend && npm start          # node (production)
 # Run a specific migration (reads DATABASE_URL from frontend/.env.local)
 node database/scripts/run_migration.js 001_raw_materials.sql
 node database/scripts/run_migration.js 002_storage_policies.sql
+node database/scripts/run_migration.js 003_material_categories.sql
+node database/scripts/run_migration.js 004_contracting_authority.sql
 # defaults to 001_raw_materials.sql if no argument given
 ```
+
+There is no test suite in this repo (no `test` script in either `package.json`).
 
 Verify both layers are running:
 - `GET http://localhost:3000/api/test-connection` — Supabase connectivity check
@@ -62,16 +66,20 @@ Key files:
 - `src/lib/supabase.js` — anon-key Supabase client + `testConnection()` utility
 - `src/lib/api.js` — axios instance with Arabic error interceptor
 - `app/api/test-connection/route.js` — Next.js API route for connection health check
+- `src/data/` — static reference datasets bundled with the frontend (e.g. `algeria-wilayas.js`: all 58 wilayas with their communes in Arabic, keyed by `code`). Import directly; these are not fetched from the API.
 
 ### Backend (`backend/src/`)
 
 `server.js` imports all route files and mounts them under `/api/<section>`. Logic lives in `controllers/` — routes are thin and only wire up multer and call the controller.
 
 - `config/db.js` — exports a `pg.Pool`. **Critical quirk:** Supabase wraps passwords that contain special characters in `[...]` in the connection string — `db.js` strips those brackets before passing credentials to pg.
-- `controllers/rawMaterialsController.js` — the reference implementation for all future controllers: pagination+search on GET, input validation returning Arabic error messages, Supabase Storage upload via service-role client.
-- `middleware/auth.js` — validates Supabase JWT via `supabase.auth.getUser(token)` (service role key).
+- `controllers/rawMaterialsController.js` — the reference implementation for all future controllers: pagination+search on GET, input validation returning Arabic error messages, Supabase Storage upload via service-role client. `materialCategoriesController.js` and `contractingAuthorityController.js` follow the same shape (list with `page`/`search` query params + pagination envelope, `getById`, `create`/`update` with shared field validation, `remove`).
+- `middleware/auth.js` — validates Supabase JWT via `supabase.auth.getUser(token)` (service role key). **Not currently applied to any route** — routes are unprotected until a section wires it in.
+- `middleware/validation.js` — a generic Joi-schema `validate()` wrapper. Scaffolded but unused; controllers currently do validation inline instead (see `rawMaterialsController.js`).
 - `routes/users.js` — uses Supabase Admin API instead of pg (no `users` table).
 - `routes/rawMaterials.js` — declares `/upload-image` **before** `/:id` to prevent route conflict; uses multer memory storage (5 MB limit, images only).
+- `routes/authorityBranches.js`, `contractor.js`, `deals.js`, `receipts.js`, `invoices.js`, `backup.js` — **stub routes**, not yet backed by a controller or migration. They query pg tables (`authority_branches`, `deals`, …) that don't exist yet, or return `{ message: "... — to be implemented" }` placeholders. Follow the "Adding a New Section" pattern below to flesh one out.
+- `utils/email.js` — `sendEmail()` stub used by `routes/backup.js`; only logs to console, no provider (nodemailer/Resend/SendGrid) configured yet.
 
 ### Database
 
@@ -88,6 +96,10 @@ Migrations are plain SQL in `database/migrations/`, numbered `001_`, `002_`, …
 |------|----------------|
 | `001_raw_materials.sql` | `material_unit` enum, `raw_materials` table, index, trigger, RLS |
 | `002_storage_policies.sql` | `materials` Storage bucket (public, 5 MB, images only), SELECT/INSERT/DELETE policies |
+| `003_material_categories.sql` | `material_categories` table, index, trigger, RLS |
+| `004_contracting_authority.sql` | `contracting_authorities` table, indexes on `name`/`wilaya`, trigger, RLS |
+
+Note the numbering gap in section names vs files: `contracting-authority` is section 2 in the UI/route table below but its migration is `004` (`003` was already taken by `material_categories`). Don't assume section order matches migration number.
 
 ## Environment Variables
 
@@ -113,10 +125,39 @@ FRONTEND_URL=http://localhost:3000
 
 - **Arabic UI, English code** — all visible text in Arabic, all identifiers/variables in English.
 - **RTL throughout** — `dir="rtl"` on `<html>`. Sidebar is on the **right**; flex row order is reversed from LTR conventions.
-- **Tailwind only** — no inline styles, no CSS modules. Every new component must use responsive prefixes (`sm:`, `md:`, `lg:`).
+- **Tailwind + inline style for dynamic colors** — use Tailwind for all static styles; use `style={{ backgroundColor: color + "18" }}` only when the color comes from the `sections[]` array at runtime. No CSS modules.  Every new component must use responsive prefixes (`sm:`, `md:`, `lg:`).
 - **Font** — Tajawal via Google Fonts in `layout.js`. No other font should be introduced.
 - **Section color** — each section has a hex color defined in the `sections[]` array in `page.js`. Use it (with opacity suffix like `+ "18"`) for icon backgrounds in that section's components.
 - **Toast notifications** — implemented as local state in `*Page` components (`setTimeout` dismiss after 3.5 s), positioned with `fixed bottom-6 left-1/2 -translate-x-1/2`. Green for success, red for error.
+
+## UI Table Standards
+
+Applies to every table component (existing and future) across all sections.
+
+### Table Layout:
+- Always use `table-fixed` and `w-full` on the table element
+- Always wrap the table in a div with `overflow-x-auto` and `w-full`
+
+### Table Header `<th>`:
+- `font-bold text-base tracking-wide`
+- `px-3 py-3 text-right whitespace-nowrap`
+- Keep section color for background
+
+### Table Data `<td>`:
+- `font-medium text-sm text-slate-800`
+- `px-3 py-3 text-right`
+- `whitespace-nowrap overflow-hidden text-ellipsis`
+
+### Table Rows `<tr>` in `tbody`:
+- `border-b border-slate-100`
+
+### General:
+- Every table must have an empty state message in Arabic
+- Every table must have a loading spinner during API calls
+- Every table must have a search bar
+- Action buttons: edit (blue), delete (red)
+- Full RTL support at all times
+- Make sure all new UI components are fully responsive for mobile screens using Tailwind CSS responsive prefixes (`sm:`, `md:`, `lg:`). Full RTL support must be maintained.
 
 ## Adding a New Section (pattern to follow)
 
@@ -125,11 +166,17 @@ FRONTEND_URL=http://localhost:3000
 3. **`page.js`:** add an `activeSection === "<section-id>"` branch in the main content area rendering `<*Page activeService={activeService} onServiceChange={setActiveService} />`.
 4. **Database:** add `database/migrations/00N_<section>.sql` following the table conventions above; run it with the migration script.
 
+**Adding a sub-section within an existing section** (e.g. material categories inside raw materials):
+- Create a `categories/` subfolder under the section's component directory with its own `*Page`, `*List`, `*Form`, `*DeleteModal`.
+- Add `showCategories` state to the parent `*Page`; render `<SubPage />` when true with a breadcrumb back button (no changes to `page.js` needed).
+- The sub-section's `*Page` is self-contained: it owns its own fetch/toast/modal state and does not receive `activeService` props.
+
 ## API Route Conventions
 
 | Section              | Base path                     |
 |----------------------|-------------------------------|
 | Raw Materials        | `/api/raw-materials`          |
+| Material Categories  | `/api/material-categories`    |
 | Contracting Auth.    | `/api/contracting-authority`  |
 | Authority Branches   | `/api/authority-branches`     |
 | Contractor           | `/api/contractor`             |

@@ -2,8 +2,10 @@
 import { useEffect, useRef } from "react";
 import { Search, Edit, Trash2, ChevronRight, ChevronLeft } from "lucide-react";
 
-export default function RawMaterialsList({
-  materials,
+const COLOR = "#1A5276";
+
+export default function ContractingAuthoritiesList({
+  authorities,
   loading,
   pagination,
   search,
@@ -33,7 +35,7 @@ export default function RawMaterialsList({
             type="text"
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            placeholder="ابحث باسم المادة..."
+            placeholder="ابحث باسم المصلحة..."
             className="bg-transparent text-sm w-full outline-none text-slate-700 placeholder:text-slate-400"
           />
         </div>
@@ -44,76 +46,53 @@ export default function RawMaterialsList({
         <div className="flex items-center justify-center py-24">
           <div
             className="w-8 h-8 rounded-full border-2 border-slate-100 animate-spin"
-            style={{ borderTopColor: "#2D7A4F", borderWidth: "3px" }}
+            style={{ borderTopColor: COLOR, borderWidth: "3px" }}
           />
         </div>
-      ) : materials.length === 0 ? (
+      ) : authorities.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center px-4">
           <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4">
             <Search size={22} className="text-slate-300" />
           </div>
-          <p className="text-slate-500 text-sm font-medium">لا توجد مواد أولية</p>
+          <p className="text-slate-500 text-sm font-medium">لا توجد مصالح متعاقدة</p>
           <p className="text-slate-400 text-xs mt-1">
-            {search ? "لا توجد نتائج لهذا البحث" : "ابدأ بإضافة مادة جديدة"}
+            {search ? "لا توجد نتائج لهذا البحث" : "ابدأ بإضافة مصلحة جديدة"}
           </p>
         </div>
       ) : (
         <div className="overflow-x-auto w-full">
-          <table className="table-fixed w-full text-sm min-w-[520px]">
+          <table className="table-fixed w-full min-w-full text-sm min-w-[640px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="w-12 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500">#</th>
-                <th className="w-40 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500">الاسم بالعربي</th>
-                <th className="w-40 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 hidden md:table-cell">الاسم باللاتيني</th>
-                <th className="w-24 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500">الوحدة</th>
-                <th className="w-48 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 hidden lg:table-cell">الوصف</th>
-                <th className="w-20 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 hidden sm:table-cell">الصورة</th>
-                <th className="w-24 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500">الإجراءات</th>
+                <th className="w-12 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-bold text-base tracking-wide text-slate-500">#</th>
+                <th className="w-48 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-bold text-base tracking-wide text-slate-500">الاسم</th>
+                <th className="w-28 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-bold text-base tracking-wide text-slate-500 hidden md:table-cell">الولاية</th>
+                <th className="w-28 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-bold text-base tracking-wide text-slate-500 hidden lg:table-cell">البلدية</th>
+                <th className="w-32 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-bold text-base tracking-wide text-slate-500 hidden sm:table-cell">الهاتف</th>
+                <th className="w-32 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-bold text-base tracking-wide text-slate-500 hidden lg:table-cell">NIS</th>
+                <th className="w-24 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-bold text-base tracking-wide text-slate-500">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {materials.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50/60 transition-colors border-b border-slate-100">
-                  <td className="w-12 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 font-mono">{m.id}</td>
-                  <td className="w-40 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800">{m.name_ar}</td>
-                  <td className="w-40 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 hidden md:table-cell">
-                    {m.name_lat || <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="w-24 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
-                      {m.unit}
-                    </span>
-                  </td>
-                  <td className="w-48 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 hidden lg:table-cell">
-                    <span className="line-clamp-1">
-                      {m.description || <span className="text-slate-300">—</span>}
-                    </span>
-                  </td>
-                  <td className="w-20 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis hidden sm:table-cell">
-                    {m.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={m.image_url}
-                        alt={m.name_ar}
-                        className="w-10 h-10 rounded-lg object-cover border border-slate-100"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                        <span className="text-[9px] text-slate-400">لا صورة</span>
-                      </div>
-                    )}
-                  </td>
+              {authorities.map((a) => (
+                <tr key={a.id} className="hover:bg-slate-50/60 transition-colors border-b border-slate-100">
+                  <td className="w-12 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 font-mono">{a.id}</td>
+                  <td className="w-48 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800">{a.name}</td>
+                  <td className="w-28 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 hidden md:table-cell">{a.wilaya}</td>
+                  <td className="w-28 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 hidden lg:table-cell">{a.commune}</td>
+                  <td className="w-32 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 hidden sm:table-cell" dir="ltr">{a.phone}</td>
+                  <td className="w-32 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 hidden lg:table-cell" dir="ltr">{a.nis}</td>
                   <td className="w-24 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800">
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => onEdit(m)}
+                        onClick={() => onEdit(a)}
                         className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
                         title="تعديل"
                       >
                         <Edit size={15} />
                       </button>
                       <button
-                        onClick={() => onDelete(m)}
+                        onClick={() => onDelete(a)}
                         className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
                         title="حذف"
                       >
@@ -132,10 +111,9 @@ export default function RawMaterialsList({
       {!loading && pagination.totalPages > 1 && (
         <div className="px-4 py-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-xs text-slate-500 order-2 sm:order-1">
-            {pagination.total} مادة — صفحة {pagination.page} من {pagination.totalPages}
+            {pagination.total} مصلحة — صفحة {pagination.page} من {pagination.totalPages}
           </span>
           <div className="flex items-center gap-1 order-1 sm:order-2">
-            {/* In RTL flex, first item appears on RIGHT */}
             <button
               onClick={() => onPageChange(pagination.page - 1)}
               disabled={pagination.page <= 1}
@@ -155,7 +133,7 @@ export default function RawMaterialsList({
                     ? "text-white"
                     : "text-slate-500 hover:bg-slate-100"
                 }`}
-                style={p === pagination.page ? { backgroundColor: "#2D7A4F" } : {}}
+                style={p === pagination.page ? { backgroundColor: COLOR } : {}}
               >
                 {p}
               </button>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import RawMaterialsPage from "@/components/raw-materials/RawMaterialsPage";
+import ContractingAuthorityPage from "@/components/contracting-authority/ContractingAuthorityPage";
 import {
   Package,
   Building2,
@@ -301,6 +302,11 @@ export default function Dashboard() {
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {activeSection === "raw-materials" ? (
             <RawMaterialsPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : activeSection === "contracting-authority" ? (
+            <ContractingAuthorityPage
               activeService={activeService}
               onServiceChange={setActiveService}
             />

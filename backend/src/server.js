@@ -2,7 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const rawMaterialsRouter      = require("./routes/rawMaterials");
+const rawMaterialsRouter          = require("./routes/rawMaterials");
+const materialCategoriesRouter    = require("./routes/materialCategories");
 const contractingAuthorityRouter = require("./routes/contractingAuthority");
 const authorityBranchesRouter = require("./routes/authorityBranches");
 const contractorRouter        = require("./routes/contractor");
@@ -24,6 +25,7 @@ app.get("/api/health", (req, res) => {
 
 // Routes
 app.use("/api/raw-materials",         rawMaterialsRouter);
+app.use("/api/material-categories",   materialCategoriesRouter);
 app.use("/api/contracting-authority", contractingAuthorityRouter);
 app.use("/api/authority-branches",    authorityBranchesRouter);
 app.use("/api/contractor",            contractorRouter);
