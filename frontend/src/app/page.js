@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import RawMaterialsPage from "@/components/raw-materials/RawMaterialsPage";
 import {
   Package,
   Building2,
@@ -298,7 +299,12 @@ export default function Dashboard() {
 
         {/* ── Main Content ── */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {!activeService ? (
+          {activeSection === "raw-materials" ? (
+            <RawMaterialsPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : !activeService ? (
             /* Welcome / Section Overview */
             <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto">
               <div

@@ -1,153 +1,142 @@
-# CLAUDE.md — منصة تسيير الصفقات وإدارة الموارد
+# CLAUDE.md
 
-## 🏗️ Project Overview
-A web platform for managing procurement deals (Marchés Publics) and resource management, designed for suppliers who deliver goods to contracting authorities and their branches.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🧱 Tech Stack
-| Layer      | Technology         | Hosting     |
-|------------|--------------------|-------------|
-| Frontend   | Next.js + Tailwind | Netlify     |
-| Backend    | Node.js + Express  | Railway     |
-| Database   | PostgreSQL         | Supabase    |
-| Storage    | Supabase Storage   | Supabase    |
+## Project Overview
 
-## 📁 Project Structure
+A web platform for managing Algerian public procurement deals (Marchés Publics) — tracking raw materials, contracting authorities, their branches, contractors, deals, delivery receipts, invoices, users, and database backups.
 
-```
-project-root/
-├── frontend/                    # Next.js application
-│   ├── public/
-│   │   └── assets/              # Static assets (logos, icons)
-│   ├── src/
-│   │   ├── app/                 # Next.js App Router
-│   │   │   ├── layout.js        # Root layout (RTL + Arabic)
-│   │   │   ├── page.js          # Main dashboard
-│   │   │   └── login/
-│   │   │       └── page.js      # Login page
-│   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   │   ├── Sidebar.jsx          # Right sidebar (sections)
-│   │   │   │   ├── TopBar.jsx           # Top bar (section services)
-│   │   │   │   └── MainLayout.jsx       # Main layout wrapper
-│   │   │   ├── raw-materials/           # المواد الأولية
-│   │   │   ├── contracting-authority/   # المصلحة المتعاقدة
-│   │   │   ├── authority-branches/      # فروع المصلحة المتعاقدة
-│   │   │   ├── contractor/              # المتعامل المتعاقد
-│   │   │   ├── deals/                   # الصفقات
-│   │   │   ├── receipts/                # الوصولات
-│   │   │   ├── invoices/                # الفواتير
-│   │   │   ├── users/                   # المستخدمين
-│   │   │   └── database-backup/         # حفظ قاعدة المعطيات
-│   │   ├── hooks/               # Custom React hooks
-│   │   ├── lib/                 # Utilities and helpers
-│   │   │   ├── api.js           # API client (Axios)
-│   │   │   └── supabase.js      # Supabase client
-│   │   └── styles/
-│   │       └── globals.css      # Global styles + Tailwind
-│   ├── tailwind.config.js
-│   ├── next.config.js
-│   └── package.json
-│
-├── backend/                     # Express.js API
-│   ├── src/
-│   │   ├── server.js            # Entry point
-│   │   ├── config/
-│   │   │   └── db.js            # PostgreSQL connection
-│   │   ├── routes/
-│   │   │   ├── rawMaterials.js
-│   │   │   ├── contractingAuthority.js
-│   │   │   ├── authorityBranches.js
-│   │   │   ├── contractor.js
-│   │   │   ├── deals.js
-│   │   │   ├── receipts.js
-│   │   │   ├── invoices.js
-│   │   │   ├── users.js
-│   │   │   └── backup.js
-│   │   ├── controllers/         # Route handlers
-│   │   ├── models/              # Database models
-│   │   ├── middleware/
-│   │   │   ├── auth.js          # Authentication middleware
-│   │   │   └── validation.js    # Input validation
-│   │   └── utils/
-│   │       └── email.js         # Email service
-│   └── package.json
-│
-├── database/
-│   └── migrations/              # SQL migration files
-│
-├── CLAUDE.md                    # This file
-├── .gitignore
-└── README.md
+## Tech Stack
+
+| Layer    | Technology              | Local port | Hosting  |
+|----------|-------------------------|------------|----------|
+| Frontend | Next.js 16 + Tailwind 4 | 3000       | Netlify  |
+| Backend  | Node.js + Express       | 5000       | Railway  |
+| Database | PostgreSQL (Supabase)   | —          | Supabase |
+| Storage  | Supabase Storage        | —          | Supabase |
+
+## Dev Commands
+
+```bash
+# Frontend
+cd frontend && npm run dev       # Turbopack dev server → http://localhost:3000
+cd frontend && npm run build
+cd frontend && npm run lint
+
+# Backend
+cd backend && npm run dev        # nodemon → http://localhost:5000
+cd backend && npm start          # node (production)
+
+# Run a specific migration (reads DATABASE_URL from frontend/.env.local)
+node database/scripts/run_migration.js 001_raw_materials.sql
+node database/scripts/run_migration.js 002_storage_policies.sql
+# defaults to 001_raw_materials.sql if no argument given
 ```
 
-## 📋 Application Sections
+Verify both layers are running:
+- `GET http://localhost:3000/api/test-connection` — Supabase connectivity check
+- `GET http://localhost:5000/api/health` — backend heartbeat
 
-| # | Section (AR)              | Section (EN)            | Route                  | Description                                    |
-|---|---------------------------|-------------------------|------------------------|------------------------------------------------|
-| 1 | المواد الأولية            | Raw Materials           | /raw-materials         | All raw materials used in deals (food items)    |
-| 2 | المصلحة المتعاقدة        | Contracting Authority   | /contracting-authority | The entity the supplier signs the deal with     |
-| 3 | فروع المصلحة المتعاقدة   | Authority Branches      | /authority-branches    | Institutions under the contracting authority    |
-| 4 | المتعامل المتعاقد        | Contractor              | /contractor            | The supplier (second party in the deal)         |
-| 5 | الصفقات                   | Deals                   | /deals                 | View and edit all deals                         |
-| 6 | الوصولات                  | Receipts                | /receipts              | Delivery receipts sent with orders              |
-| 7 | الفواتير                  | Invoices                | /invoices              | Create and edit invoices                        |
-| 8 | المستخدمين                | Users                   | /users                 | Platform user management                        |
-| 9 | حفظ قاعدة المعطيات       | Database Backup         | /database-backup       | Backup database and send via email              |
+## Architecture
 
-## 🎨 UI Layout
+### Frontend (`frontend/src/`)
 
+**Navigation model** — `app/page.js` is the single-page shell. A `sections[]` array drives both the right sidebar and the top service bar. Two state values control what renders in the main content area: `activeSection` (which section) and `activeService` (which sub-action within the section).
+
+**Section integration pattern** — implemented sections bypass the generic placeholder and render a self-contained `*Page` component. The parent passes `activeService` and `onServiceChange` as props so the top bar stays in sync. Example: when `activeSection === "raw-materials"`, `<RawMaterialsPage activeService={activeService} onServiceChange={setActiveService} />` renders directly. The `*Page` component watches `activeService` via `useEffect` to react (e.g. `"add"` opens the form modal, `"search"` focuses the search input).
+
+**Data flow for each section:**
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  TopBar: [خدمة 1] [خدمة 2] [خدمة 3] ...        ← section services │
-├───────────────────────────────────────────────────┬─────────────────┤
-│                                                   │  ┌───────────┐  │
-│                                                   │  │ المواد    │  │
-│                                                   │  │ الأولية   │  │
-│                                                   │  ├───────────┤  │
-│                                                   │  │ المصلحة   │  │
-│                                                   │  │ المتعاقدة │  │
-│                                                   │  ├───────────┤  │
-│             Main Content Area                     │  │ فروع     │  │
-│                                                   │  │ المصلحة   │  │
-│                                                   │  ├───────────┤  │
-│                                                   │  │ المتعامل  │  │
-│                                                   │  │ المتعاقد  │  │
-│                                                   │  ├───────────┤  │
-│                                                   │  │ الصفقات   │  │
-│                                                   │  ├───────────┤  │
-│                                                   │  │ الوصولات  │  │
-│                                                   │  ├───────────┤  │
-│                                                   │  │ الفواتير  │  │
-│                                                   │  ├───────────┤  │
-│                                                   │  │المستخدمين │  │
-│                                                   │  ├───────────┤  │
-│                                                   │  │ حفظ قاعدة│  │
-│                                                   │  │ المعطيات  │  │
-│                                                   │  └───────────┘  │
-└───────────────────────────────────────────────────┴─────────────────┘
-                                                    ↑ Right Sidebar
+*Page (state: list, pagination, form open, delete modal, toast)
+  ├── *List (pure display: table, search bar, pagination)
+  ├── *Form (modal: field state + validation, calls uploadImage then create/update)
+  └── *DeleteModal (confirmation dialog)
 ```
 
-## 🔐 Security Rules
-- **NEVER** commit `.env` files or sensitive credentials to GitHub
-- All API keys, DB connection strings go in environment variables only
-- Use `.env.local` for local development (added to `.gitignore`)
+**API client** — `src/lib/api.js` is an axios instance pointed at `NEXT_PUBLIC_API_URL`. The response interceptor attaches `error.arabicMessage` so components can display Arabic errors without extra parsing.
 
-## 🖥️ UI Guidelines
-- **Language**: Arabic (UI) / English (code)
-- **Direction**: RTL (right-to-left) throughout
-- **Styling**: Tailwind CSS only — no inline styles or CSS modules
-- **Responsiveness**: All components must use Tailwind responsive prefixes (sm:, md:, lg:)
-- **Rule**: Make sure all new UI components are fully responsive for mobile screens using Tailwind CSS responsive prefixes (sm:, md:, lg:) only. Full RTL support must be maintained.
+**Service layer** — `src/services/<section>Service.js` wraps the axios calls. Components import from the service, never from `api.js` directly.
 
-## 🗄️ Database Notes
-- Tables will be defined after UI prototyping is complete
-- PostgreSQL hosted on Supabase
-- Migrations stored in `database/migrations/`
+Key files:
+- `app/layout.js` — sets `lang="ar" dir="rtl"`, loads Tajawal font
+- `src/lib/supabase.js` — anon-key Supabase client + `testConnection()` utility
+- `src/lib/api.js` — axios instance with Arabic error interceptor
+- `app/api/test-connection/route.js` — Next.js API route for connection health check
 
-## 📝 Development Workflow
-1. Always read this file before making changes
-2. Check existing components before creating new ones
-3. Test RTL layout on every new component
-4. Test mobile responsiveness on every new component
-5. Never hardcode sensitive data
+### Backend (`backend/src/`)
+
+`server.js` imports all route files and mounts them under `/api/<section>`. Logic lives in `controllers/` — routes are thin and only wire up multer and call the controller.
+
+- `config/db.js` — exports a `pg.Pool`. **Critical quirk:** Supabase wraps passwords that contain special characters in `[...]` in the connection string — `db.js` strips those brackets before passing credentials to pg.
+- `controllers/rawMaterialsController.js` — the reference implementation for all future controllers: pagination+search on GET, input validation returning Arabic error messages, Supabase Storage upload via service-role client.
+- `middleware/auth.js` — validates Supabase JWT via `supabase.auth.getUser(token)` (service role key).
+- `routes/users.js` — uses Supabase Admin API instead of pg (no `users` table).
+- `routes/rawMaterials.js` — declares `/upload-image` **before** `/:id` to prevent route conflict; uses multer memory storage (5 MB limit, images only).
+
+### Database
+
+Migrations are plain SQL in `database/migrations/`, numbered `001_`, `002_`, …. The runner at `database/scripts/run_migration.js` reads `DATABASE_URL` from `frontend/.env.local`, parses the password bracket-stripping itself, and accepts the filename as a CLI argument.
+
+**Table conventions:**
+- `id SERIAL PRIMARY KEY` (sequential integer, never UUID)
+- `created_at` / `updated_at` as `TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at` kept current by the shared `set_updated_at()` trigger function (defined once in `001_`)
+- RLS enabled; policy name `authenticated_full_access` grants full access to the `authenticated` role
+
+**Migrations applied:**
+| File | What it creates |
+|------|----------------|
+| `001_raw_materials.sql` | `material_unit` enum, `raw_materials` table, index, trigger, RLS |
+| `002_storage_policies.sql` | `materials` Storage bucket (public, 5 MB, images only), SELECT/INSERT/DELETE policies |
+
+## Environment Variables
+
+**`frontend/.env.local`** (gitignored):
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+DATABASE_URL=          # used by database/scripts/ too
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+**`backend/.env`** (gitignored — see `backend/.env.example`):
+```
+PORT=5000
+DATABASE_URL=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+FRONTEND_URL=http://localhost:3000
+```
+
+## UI Rules
+
+- **Arabic UI, English code** — all visible text in Arabic, all identifiers/variables in English.
+- **RTL throughout** — `dir="rtl"` on `<html>`. Sidebar is on the **right**; flex row order is reversed from LTR conventions.
+- **Tailwind only** — no inline styles, no CSS modules. Every new component must use responsive prefixes (`sm:`, `md:`, `lg:`).
+- **Font** — Tajawal via Google Fonts in `layout.js`. No other font should be introduced.
+- **Section color** — each section has a hex color defined in the `sections[]` array in `page.js`. Use it (with opacity suffix like `+ "18"`) for icon backgrounds in that section's components.
+- **Toast notifications** — implemented as local state in `*Page` components (`setTimeout` dismiss after 3.5 s), positioned with `fixed bottom-6 left-1/2 -translate-x-1/2`. Green for success, red for error.
+
+## Adding a New Section (pattern to follow)
+
+1. **Backend:** create `controllers/<section>Controller.js` mirroring `rawMaterialsController.js`; update `routes/<section>.js` to import from it.
+2. **Frontend:** create `src/services/<section>Service.js`; create `src/components/<section>/` with `*Page`, `*List`, `*Form`, `*DeleteModal`.
+3. **`page.js`:** add an `activeSection === "<section-id>"` branch in the main content area rendering `<*Page activeService={activeService} onServiceChange={setActiveService} />`.
+4. **Database:** add `database/migrations/00N_<section>.sql` following the table conventions above; run it with the migration script.
+
+## API Route Conventions
+
+| Section              | Base path                     |
+|----------------------|-------------------------------|
+| Raw Materials        | `/api/raw-materials`          |
+| Contracting Auth.    | `/api/contracting-authority`  |
+| Authority Branches   | `/api/authority-branches`     |
+| Contractor           | `/api/contractor`             |
+| Deals                | `/api/deals`                  |
+| Receipts             | `/api/receipts`               |
+| Invoices             | `/api/invoices`               |
+| Users                | `/api/users`                  |
+| Backup               | `/api/backup`                 |
+
+CORS is locked to `FRONTEND_URL` (defaults to `http://localhost:3000`).
