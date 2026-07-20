@@ -2,6 +2,7 @@
 import { useState } from "react";
 import RawMaterialsPage from "@/components/raw-materials/RawMaterialsPage";
 import ContractingAuthorityPage from "@/components/contracting-authority/ContractingAuthorityPage";
+import AuthorityBranchesPage from "@/components/authority-branches/AuthorityBranchesPage";
 import {
   Package,
   Building2,
@@ -307,6 +308,11 @@ export default function Dashboard() {
             />
           ) : activeSection === "contracting-authority" ? (
             <ContractingAuthorityPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : activeSection === "authority-branches" ? (
+            <AuthorityBranchesPage
               activeService={activeService}
               onServiceChange={setActiveService}
             />
