@@ -34,6 +34,7 @@ node database/scripts/run_migration.js 003_material_categories.sql
 node database/scripts/run_migration.js 004_contracting_authority.sql
 node database/scripts/run_migration.js 005_authority_branches.sql
 node database/scripts/run_migration.js 006_alter_authority_branches.sql
+node database/scripts/run_migration.js 007_contractors.sql
 # defaults to 001_raw_materials.sql if no argument given
 ```
 
@@ -75,12 +76,12 @@ Key files:
 `server.js` imports all route files and mounts them under `/api/<section>`. Logic lives in `controllers/` — routes are thin and only wire up multer and call the controller.
 
 - `config/db.js` — exports a `pg.Pool`. **Critical quirk:** Supabase wraps passwords that contain special characters in `[...]` in the connection string — `db.js` strips those brackets before passing credentials to pg.
-- `controllers/rawMaterialsController.js` — the reference implementation for all future controllers: pagination+search on GET, input validation returning Arabic error messages, Supabase Storage upload via service-role client. `materialCategoriesController.js`, `contractingAuthorityController.js`, and `authorityBranchesController.js` follow the same shape (list with `page`/`search` query params + pagination envelope, `getById`, `create`/`update` with shared field validation, `remove`).
+- `controllers/rawMaterialsController.js` — the reference implementation for all future controllers: pagination+search on GET, input validation returning Arabic error messages, Supabase Storage upload via service-role client. `materialCategoriesController.js`, `contractingAuthorityController.js`, `authorityBranchesController.js`, and `contractorsController.js` follow the same shape (list with `page`/`search` query params + pagination envelope, `getById`, `create`/`update` with shared field validation, `remove`) — none of them use Storage upload, only `rawMaterialsController.js` does.
 - `middleware/auth.js` — validates Supabase JWT via `supabase.auth.getUser(token)` (service role key). **Not currently applied to any route** — routes are unprotected until a section wires it in.
 - `middleware/validation.js` — a generic Joi-schema `validate()` wrapper. Scaffolded but unused; controllers currently do validation inline instead (see `rawMaterialsController.js`).
 - `routes/users.js` — uses Supabase Admin API instead of pg (no `users` table).
 - `routes/rawMaterials.js` — declares `/upload-image` **before** `/:id` to prevent route conflict; uses multer memory storage (5 MB limit, images only).
-- `routes/contractor.js`, `deals.js`, `receipts.js`, `invoices.js`, `backup.js` — **stub routes**, not yet backed by a controller or migration. They query pg tables (`deals`, …) that don't exist yet, or return `{ message: "... — to be implemented" }` placeholders. Follow the "Adding a New Section" pattern below to flesh one out.
+- `routes/deals.js`, `receipts.js`, `invoices.js`, `backup.js` — **stub routes**, not yet backed by a controller or migration. They query pg tables (`deals`, …) that don't exist yet, or return `{ message: "... — to be implemented" }` placeholders. Follow the "Adding a New Section" pattern below to flesh one out.
 - `utils/email.js` — `sendEmail()` stub used by `routes/backup.js`; only logs to console, no provider (nodemailer/Resend/SendGrid) configured yet.
 
 ### Database
@@ -102,8 +103,9 @@ Migrations are plain SQL in `database/migrations/`, numbered `001_`, `002_`, …
 | `004_contracting_authority.sql` | `contracting_authorities` table, indexes on `name`/`wilaya`, trigger, RLS |
 | `005_authority_branches.sql` | `authority_branches` table, indexes on `name`/`wilaya`, trigger, RLS — no FK to `contracting_authorities` (linked later in deals) |
 | `006_alter_authority_branches.sql` | drops `NOT NULL` on `authority_branches.nis`/`nif`/`rc_number`/`rc_date` — those fields are optional |
+| `007_contractors.sql` | `contractors` table, indexes on `full_name`/`wilaya`, trigger, RLS |
 
-Note the numbering gap in section names vs files: `contracting-authority` is section 2 in the UI/route table below but its migration is `004` (`003` was already taken by `material_categories`). Don't assume section order matches migration number.
+Note the numbering gap in section names vs files: `contracting-authority` is section 2 in the UI/route table below but its migration is `004` (`003` was already taken by `material_categories`). Don't assume section order matches migration number. Similarly `006` was consumed by an *alter* migration on `authority_branches`, not a new table — `contractors` is `007`.
 
 ## Environment Variables
 
@@ -183,7 +185,7 @@ Applies to every table component (existing and future) across all sections.
 | Material Categories  | `/api/material-categories`    |
 | Contracting Auth.    | `/api/contracting-authority`  |
 | Authority Branches   | `/api/authority-branches`     |
-| Contractor           | `/api/contractor`             |
+| Contractor           | `/api/contractors`            |
 | Deals                | `/api/deals`                  |
 | Receipts             | `/api/receipts`               |
 | Invoices             | `/api/invoices`               |
