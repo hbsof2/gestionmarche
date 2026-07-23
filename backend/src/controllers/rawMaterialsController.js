@@ -10,8 +10,8 @@ const supabase = createClient(
 const VALID_UNITS = ["كغ", "لتر", "و", "علبة", "ربطة", "حبة"];
 
 async function getAllMaterials(req, res) {
-  const { page = 1, search = "" } = req.query;
-  const limit = 10;
+  const { page = 1, search = "", limit: limitParam } = req.query;
+  const limit = limitParam ? Math.min(parseInt(limitParam), 1000) : 10;
   const offset = (parseInt(page) - 1) * limit;
   try {
     const pattern = `%${search}%`;
@@ -86,14 +86,19 @@ async function updateMaterial(req, res) {
 
 async function deleteMaterial(req, res) {
   try {
-    const linkedTables = ["deal_items", "receipt_items"];
-    for (const table of linkedTables) {
-      if (!(await tableExists(pool, table))) continue;
-      const { rows: usage } = await pool.query(
-        `SELECT COUNT(*) FROM ${table} WHERE material_id = $1`,
+    const { rows: dealUsage } = await pool.query(
+      "SELECT COUNT(*) FROM deal_items WHERE material_id = $1",
+      [req.params.id]
+    );
+    if (parseInt(dealUsage[0].count) > 0) {
+      return res.status(400).json({ error: "لا يمكن حذف هذه المادة الأولية لأنها مرتبطة بصفقة أو أكثر" });
+    }
+    if (await tableExists(pool, "receipt_items")) {
+      const { rows: receiptUsage } = await pool.query(
+        "SELECT COUNT(*) FROM receipt_items WHERE material_id = $1",
         [req.params.id]
       );
-      if (parseInt(usage[0].count) > 0) {
+      if (parseInt(receiptUsage[0].count) > 0) {
         return res.status(400).json({ error: "لا يمكن حذف هذه المادة الأولية لأنها مرتبطة بصفقة أو وصل تسليم" });
       }
     }

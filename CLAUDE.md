@@ -38,6 +38,7 @@ node database/scripts/run_migration.js 007_contractors.sql
 node database/scripts/run_migration.js 008_deals.sql
 node database/scripts/run_migration.js 009_deal_branches.sql
 node database/scripts/run_migration.js 010_fix_deal_branches_cascade.sql
+node database/scripts/run_migration.js 011_deal_items.sql
 # defaults to 001_raw_materials.sql if no argument given
 ```
 
@@ -80,21 +81,26 @@ Key files:
 
 **Deal detail / branches** — clicking a deal in `DealsList.jsx` opens `DealDetail.jsx` (full-page view, not a modal) showing the deal's linked `authority_branches` via the `deal_branches` join table. It has its own `BranchSearchableSelect` (same type-to-filter pattern as above) to add a branch, and calls `getDealBranches`/`addBranchToDeal`/`removeBranchFromDeal` from `dealsService.js`. A deal must always keep at least one branch — `removeBranchFromDeal` on the backend rejects removing the last one.
 
+**Deal items (materials)** — `DealDetail.jsx` renders `DealItems.jsx` below the branches section (separated by a divider). Unlike the other sections, its add-form is **always visible** rather than opened via a modal/`activeService`, and stays open after a successful add (only the material/category selects are cleared — TVA and quantities are left as-is since the next line item often reuses them). It has its own local `SearchableSelect` for material/category pickers and inline-edit rows (click edit → the TVA/quantity/price cells become inputs with save/cancel, no modal) rather than a separate edit form. Fetches the full material list via `rawMaterialsService.getAll(1, "", 1000)` and the full category list via `materialCategoriesService.getAll()` (categories have no pagination at all — `getAllCategories` always returns the full array).
+
 ### Backend (`backend/src/`)
 
 `server.js` imports all route files and mounts them under `/api/<section>`. Logic lives in `controllers/` — routes are thin and only wire up multer and call the controller.
 
 - `config/db.js` — exports a `pg.Pool`. **Critical quirk #1:** Supabase wraps passwords that contain special characters in `[...]` in the connection string — `db.js` strips those brackets before passing credentials to pg. **Critical quirk #2:** `pg` parses `DATE` columns (OID `1082`) into local-timezone JS `Date` objects by default, which then serialize to a UTC ISO string shifted back a day (e.g. `2026-01-01` → `2025-12-31T23:00:00.000Z`) whenever the server's local timezone is ahead of UTC. `db.js` overrides that type parser to keep `DATE` values as the raw `"YYYY-MM-DD"` string — don't remove this, and don't reintroduce `new Date(...)`/`.toISOString()` round-trips for date fields anywhere in the stack (controllers or frontend forms should build/parse date strings manually, see the date-picker pattern below).
 - `controllers/rawMaterialsController.js` — the reference implementation for all future controllers: pagination+search on GET, input validation returning Arabic error messages, Supabase Storage upload via service-role client. `materialCategoriesController.js`, `contractingAuthorityController.js`, `authorityBranchesController.js`, and `contractorsController.js` follow the same shape (list with `page`/`search` query params + pagination envelope, `getById`, `create`/`update` with shared field validation, `remove`) — none of them use Storage upload, only `rawMaterialsController.js` does.
-- `controllers/contractorsController.js` and `contractingAuthorityController.js` additionally accept an optional `limit` query param (default `10`, capped at `1000`) on `getAll` — used by `DealForm.jsx` to pull the full list for its searchable-select dropdowns instead of just one paginated page.
-- `controllers/dealsController.js` — first controller to `JOIN` across tables: `getAll`/`getById` join `contractors` and `contracting_authorities` to return `contractor_name`/`authority_name` alongside the deal row. `create`/`update` validate that `end_date` is strictly after `start_date` and translate the `23505` unique-violation Postgres error code (duplicate `reference`) into an Arabic message. It also owns the `deal_branches` join-table endpoints — `getDealBranches`, `addBranchToDeal`, `removeBranchFromDeal` (mounted at `/api/deals/:id/branches` in `routes/deals.js`, declared **before** the `/:id` routes) — `removeBranchFromDeal` refuses to remove a deal's last remaining branch. Use this controller as the reference for any future section with FK relationships (`receipts`, `invoices`).
+- `controllers/contractorsController.js`, `contractingAuthorityController.js`, and `rawMaterialsController.js` additionally accept an optional `limit` query param (default `10`, capped at `1000`) on `getAll` — used by `DealForm.jsx`/`DealItems.jsx` to pull the full list for their searchable-select dropdowns instead of just one paginated page.
+- `controllers/dealsController.js` — first controller to `JOIN` across tables: `getAll`/`getById` join `contractors` and `contracting_authorities` to return `contractor_name`/`authority_name` alongside the deal row. `create`/`update` validate that `end_date` is strictly after `start_date` and translate the `23505` unique-violation Postgres error code (duplicate `reference`) into an Arabic message. It also owns two join-table sub-resources, both mounted in `routes/deals.js` **before** the `/:id` routes:
+  - `getDealBranches`/`addBranchToDeal`/`removeBranchFromDeal` (`/api/deals/:id/branches`) — `removeBranchFromDeal` refuses to remove a deal's last remaining branch.
+  - `getDealItems`/`addDealItem`/`updateDealItem`/`removeDealItem` (`/api/deals/:id/items`) — the deal's material/pricing lines (`deal_items` table). `addDealItem` validates required fields, `min_quantity < max_quantity`, `0 ≤ tva ≤ 100`, `unit_price > 0`, and translates the `23505` unique-violation (duplicate `material_id` per deal) into an Arabic message; `updateDealItem` only updates `tva`/`min_quantity`/`max_quantity`/`unit_price` (material/category aren't editable after creation).
+  Use this controller as the reference for any future section with FK relationships (`receipts`, `invoices`).
 - `middleware/auth.js` — validates Supabase JWT via `supabase.auth.getUser(token)` (service role key). **Not currently applied to any route** — routes are unprotected until a section wires it in.
 - `middleware/validation.js` — a generic Joi-schema `validate()` wrapper. Scaffolded but unused; controllers currently do validation inline instead (see `rawMaterialsController.js`).
 - `routes/users.js` — uses Supabase Admin API instead of pg (no `users` table).
 - `routes/rawMaterials.js` — declares `/upload-image` **before** `/:id` to prevent route conflict; uses multer memory storage (5 MB limit, images only).
 - `routes/receipts.js`, `invoices.js`, `backup.js` — **stub routes**, not yet backed by a controller or migration. They query pg tables that don't exist yet, or return `{ message: "... — to be implemented" }` placeholders. Follow the "Adding a New Section" pattern below to flesh one out.
 - `utils/email.js` — `sendEmail()` stub used by `routes/backup.js`; only logs to console, no provider (nodemailer/Resend/SendGrid) configured yet.
-- `utils/tableExists.js` — `tableExists(client, tableName)` checks `information_schema.tables` before querying a table that may not exist yet (e.g. `deal_items`, `receipts`); used by controllers' `remove`/`delete*` functions to guard forward-looking relationship checks. See [Deletion Protection Rules](#deletion-protection-rules).
+- `utils/tableExists.js` — `tableExists(client, tableName)` checks `information_schema.tables` before querying a table that may not exist yet (e.g. `receipts`, `receipt_items`); used by controllers' `remove`/`delete*` functions to guard forward-looking relationship checks. `deal_items` is a real table now (migration `011`) — controllers query it directly without this guard. See [Deletion Protection Rules](#deletion-protection-rules).
 
 ### Database
 
@@ -119,8 +125,9 @@ Migrations are plain SQL in `database/migrations/`, numbered `001_`, `002_`, …
 | `008_deals.sql` | `deals` table (`reference` UNIQUE, FKs to `contractors`/`contracting_authorities`), indexes on `reference`/`contractor_id`/`authority_id`, trigger, RLS |
 | `009_deal_branches.sql` | `deal_branches` join table (`deal_id`+`branch_id` FKs, `UNIQUE(deal_id, branch_id)`), indexes on both FK columns, RLS — originally `deal_id` was `ON DELETE CASCADE` |
 | `010_fix_deal_branches_cascade.sql` | drops and recreates the `deal_branches.deal_id` FK as `ON DELETE RESTRICT`, so the DB itself blocks deleting a deal that still has branches (backstops the application-level check in `dealsController.js`) |
+| `011_deal_items.sql` | `deal_items` table (the materials/pricing lines of a deal: FKs to `deals`/`raw_materials`/`material_categories`, all `ON DELETE RESTRICT`; `tva`, `min_quantity`, `max_quantity`, `unit_price`), indexes on all three FK columns, `UNIQUE(deal_id, material_id)`, trigger, RLS |
 
-Note the numbering gap in section names vs files: `contracting-authority` is section 2 in the UI/route table below but its migration is `004` (`003` was already taken by `material_categories`). Don't assume section order matches migration number. Similarly `006` was consumed by an *alter* migration on `authority_branches`, not a new table — `contractors` is `007`, `deals` is `008`.
+Note the numbering gap in section names vs files: `contracting-authority` is section 2 in the UI/route table below but its migration is `004` (`003` was already taken by `material_categories`). Don't assume section order matches migration number. Similarly `006` was consumed by an *alter* migration on `authority_branches`, not a new table — `contractors` is `007`, `deals` is `008`. `deal_items` is `011`, not `010` — `010` was already taken by the cascade-fix migration when `deal_items` was added; always check the highest existing number in `database/migrations/` before naming a new one rather than assuming the next round number is free.
 
 ## Environment Variables
 
@@ -218,6 +225,7 @@ Applies to every table component (existing and future) across all sections.
 - Frontend delete modals must handle HTTP 400 and show Arabic error
 - Use `tableExists()` helper (`backend/src/utils/tableExists.js`) before querying future tables
 - This rule applies to ALL tables in the project
+- `raw_materials` has no `category_id` column — a material's category only exists per deal line, on `deal_items.category_id`. `materialCategoriesController.js`'s `deleteCategory` check queries `deal_items.category_id` directly; don't reintroduce a join through `raw_materials` for this (an earlier version tried that and could never actually match anything).
 
 ## API Route Conventions
 

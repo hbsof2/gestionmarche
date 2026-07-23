@@ -1,7 +1,7 @@
 import api from "@/lib/api";
 
-export async function getAll(page = 1, search = "") {
-  const { data } = await api.get("/api/raw-materials", { params: { page, search } });
+export async function getAll(page = 1, search = "", limit) {
+  const { data } = await api.get("/api/raw-materials", { params: { page, search, limit } });
   return data;
 }
 

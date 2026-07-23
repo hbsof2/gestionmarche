@@ -107,6 +107,13 @@ async function remove(req, res) {
     if (parseInt(linkedRows[0].count) > 0) {
       return res.status(400).json({ error: "لا يمكن حذف هذه الصفقة لأنها تحتوي على فروع مصلحة مرتبطة بها، قم بحذف الفروع أولاً" });
     }
+    const { rows: itemRows } = await pool.query(
+      "SELECT COUNT(*) FROM deal_items WHERE deal_id = $1",
+      [req.params.id]
+    );
+    if (parseInt(itemRows[0].count) > 0) {
+      return res.status(400).json({ error: "لا يمكن حذف هذه الصفقة لأنها تحتوي على مواد أولية مسجلة، قم بحذف المواد أولاً" });
+    }
     if (await tableExists(pool, "receipts")) {
       const { rows: receiptRows } = await pool.query(
         "SELECT COUNT(*) FROM receipts WHERE deal_id = $1",
@@ -179,6 +186,90 @@ async function removeBranchFromDeal(req, res) {
   }
 }
 
+function validateDealItemNumbers(body) {
+  const { tva, max_quantity, min_quantity, unit_price } = body;
+  if (tva === undefined || tva === null || tva === "") return "نسبة الضريبة على القيمة المضافة مطلوبة";
+  if (Number(tva) < 0 || Number(tva) > 100) return "يجب أن تكون نسبة الضريبة بين 0 و 100";
+  if (min_quantity === undefined || min_quantity === null || min_quantity === "") return "الكمية الدنيا مطلوبة";
+  if (Number(min_quantity) < 0) return "يجب أن تكون الكمية الدنيا أكبر من أو تساوي 0";
+  if (max_quantity === undefined || max_quantity === null || max_quantity === "") return "الكمية القصوى مطلوبة";
+  if (Number(max_quantity) <= Number(min_quantity)) return "يجب أن تكون الكمية القصوى أكبر من الكمية الدنيا";
+  if (unit_price === undefined || unit_price === null || unit_price === "") return "السعر الوحدوي مطلوب";
+  if (Number(unit_price) <= 0) return "يجب أن يكون السعر الوحدوي أكبر من 0";
+  return null;
+}
+
+function validateDealItem(body) {
+  if (!body.material_id) return "المادة الأولية مطلوبة";
+  if (!body.category_id) return "الصنف مطلوب";
+  return validateDealItemNumbers(body);
+}
+
+async function getDealItems(req, res) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT di.*, rm.name_ar, rm.name_lat, rm.unit, mc.name_ar AS category_name
+       FROM deal_items di
+       JOIN raw_materials rm ON rm.id = di.material_id
+       JOIN material_categories mc ON mc.id = di.category_id
+       WHERE di.deal_id = $1
+       ORDER BY di.id ASC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function addDealItem(req, res) {
+  const error = validateDealItem(req.body);
+  if (error) return res.status(400).json({ error });
+  const { material_id, category_id, tva, max_quantity, min_quantity, unit_price } = req.body;
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO deal_items (deal_id, material_id, category_id, tva, max_quantity, min_quantity, unit_price)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [req.params.id, material_id, category_id, tva, max_quantity, min_quantity, unit_price]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === "23505") return res.status(400).json({ error: "هذه المادة الأولية مضافة مسبقاً لهذه الصفقة" });
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function updateDealItem(req, res) {
+  const error = validateDealItemNumbers(req.body);
+  if (error) return res.status(400).json({ error });
+  const { tva, max_quantity, min_quantity, unit_price } = req.body;
+  try {
+    const { rows } = await pool.query(
+      `UPDATE deal_items
+       SET tva=$1, max_quantity=$2, min_quantity=$3, unit_price=$4
+       WHERE id=$5 AND deal_id=$6 RETURNING *`,
+      [tva, max_quantity, min_quantity, unit_price, req.params.itemId, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: "المادة غير موجودة في هذه الصفقة" });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function removeDealItem(req, res) {
+  try {
+    const { rows } = await pool.query(
+      "DELETE FROM deal_items WHERE id=$1 AND deal_id=$2 RETURNING id",
+      [req.params.itemId, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: "المادة غير موجودة في هذه الصفقة" });
+    res.json({ deleted: rows[0].id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getAll,
   getById,
@@ -188,4 +279,8 @@ module.exports = {
   getDealBranches,
   addBranchToDeal,
   removeBranchFromDeal,
+  getDealItems,
+  addDealItem,
+  updateDealItem,
+  removeDealItem,
 };

@@ -39,3 +39,23 @@ export async function removeBranchFromDeal(dealId, branchId) {
   const { data } = await api.delete(`/api/deals/${dealId}/branches/${branchId}`);
   return data;
 }
+
+export async function getDealItems(dealId) {
+  const { data } = await api.get(`/api/deals/${dealId}/items`);
+  return data;
+}
+
+export async function addDealItem(dealId, body) {
+  const { data } = await api.post(`/api/deals/${dealId}/items`, body);
+  return data;
+}
+
+export async function updateDealItem(dealId, itemId, body) {
+  const { data } = await api.put(`/api/deals/${dealId}/items/${itemId}`, body);
+  return data;
+}
+
+export async function removeDealItem(dealId, itemId) {
+  const { data } = await api.delete(`/api/deals/${dealId}/items/${itemId}`);
+  return data;
+}

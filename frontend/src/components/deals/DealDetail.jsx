@@ -7,6 +7,7 @@ import {
   addBranchToDeal,
   removeBranchFromDeal,
 } from "@/services/dealsService";
+import DealItems from "./DealItems";
 
 const COLOR = "#1E8449";
 
@@ -281,6 +282,12 @@ export default function DealDetail({ deal, onBack }) {
           </div>
         )}
       </div>
+
+      {/* Divider */}
+      <div className="border-t border-slate-200 dark:border-slate-700" />
+
+      {/* Deal Items Section */}
+      <DealItems dealId={deal.id} />
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
