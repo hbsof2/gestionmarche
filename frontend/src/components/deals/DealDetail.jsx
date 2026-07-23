@@ -287,7 +287,7 @@ export default function DealDetail({ deal, onBack }) {
       <div className="border-t border-slate-200 dark:border-slate-700" />
 
       {/* Deal Items Section */}
-      <DealItems dealId={deal.id} />
+      <DealItems dealId={deal.id} dealReference={deal.reference} />
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (

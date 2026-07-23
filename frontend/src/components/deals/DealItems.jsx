@@ -9,6 +9,7 @@ import {
   updateDealItem,
   removeDealItem,
 } from "@/services/dealsService";
+import DealItemsBrowseModal from "./DealItemsBrowseModal";
 
 const COLOR = "#1E8449";
 
@@ -139,7 +140,7 @@ function validateItem({ material_id, category_id, tva, min_quantity, max_quantit
   return errors;
 }
 
-export default function DealItems({ dealId }) {
+export default function DealItems({ dealId, dealReference }) {
   const [materials, setMaterials] = useState([]);
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);
@@ -154,6 +155,7 @@ export default function DealItems({ dealId }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showBrowseModal, setShowBrowseModal] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -421,8 +423,19 @@ export default function DealItems({ dealId }) {
 
       {/* Materials Table */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700">
+        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3">
           <h4 className="text-base font-bold text-slate-800 dark:text-slate-100">قائمة المواد الأولية المضافة</h4>
+          <button
+            onClick={() => setShowBrowseModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm
+                       font-medium bg-blue-50 text-blue-600
+                       hover:bg-blue-100 transition-colors
+                       dark:bg-blue-900/30 dark:text-blue-400
+                       dark:hover:bg-blue-900/50"
+          >
+            <Search size={15} />
+            تصفح
+          </button>
         </div>
 
         {loading ? (
@@ -632,6 +645,18 @@ export default function DealItems({ dealId }) {
         >
           {toast.message}
         </div>
+      )}
+
+      {/* Browse Modal */}
+      {showBrowseModal && (
+        <DealItemsBrowseModal
+          dealId={dealId}
+          dealReference={dealReference}
+          items={items}
+          categories={categories}
+          onClose={() => setShowBrowseModal(false)}
+          onItemUpdated={() => fetchItems()}
+        />
       )}
     </div>
   );

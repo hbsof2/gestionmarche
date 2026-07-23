@@ -242,13 +242,13 @@ async function addDealItem(req, res) {
 async function updateDealItem(req, res) {
   const error = validateDealItemNumbers(req.body);
   if (error) return res.status(400).json({ error });
-  const { tva, max_quantity, min_quantity, unit_price } = req.body;
+  const { category_id, tva, max_quantity, min_quantity, unit_price } = req.body;
   try {
     const { rows } = await pool.query(
       `UPDATE deal_items
-       SET tva=$1, max_quantity=$2, min_quantity=$3, unit_price=$4
-       WHERE id=$5 AND deal_id=$6 RETURNING *`,
-      [tva, max_quantity, min_quantity, unit_price, req.params.itemId, req.params.id]
+       SET tva=$1, max_quantity=$2, min_quantity=$3, unit_price=$4, category_id=COALESCE($5, category_id)
+       WHERE id=$6 AND deal_id=$7 RETURNING *`,
+      [tva, max_quantity, min_quantity, unit_price, category_id || null, req.params.itemId, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "المادة غير موجودة في هذه الصفقة" });
     res.json(rows[0]);
