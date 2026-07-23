@@ -1,21 +1,24 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Building2 } from "lucide-react";
-import ContractingAuthoritiesList from "./ContractingAuthoritiesList";
-import ContractingAuthorityForm from "./ContractingAuthorityForm";
-import ContractingAuthorityDeleteModal from "./ContractingAuthorityDeleteModal";
-import { getAll, create, update, remove } from "@/services/contractingAuthorityService";
+import { Plus, Handshake } from "lucide-react";
+import DealsList from "./DealsList";
+import DealForm from "./DealForm";
+import DealDeleteModal from "./DealDeleteModal";
+import DealDetail from "./DealDetail";
+import { getAll, create, update, remove } from "@/services/dealsService";
 
-const COLOR = "#1A5276";
+const COLOR = "#1E8449";
 
-export default function ContractingAuthorityPage({ activeService, onServiceChange }) {
-  const [authorities, setAuthorities] = useState([]);
+export default function DealsPage({ activeService, onServiceChange }) {
+  const [deals, setDeals] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0, limit: 10 });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editAuthority, setEditAuthority] = useState(null);
+  const [editDeal, setEditDeal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [selectedDeal, setSelectedDeal] = useState(null);
+  const [selectedRow, setSelectedRow] = useState(null);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = "success") => {
@@ -23,11 +26,11 @@ export default function ContractingAuthorityPage({ activeService, onServiceChang
     setTimeout(() => setToast(null), 3500);
   };
 
-  const fetchAuthorities = async (page = 1, q = search) => {
+  const fetchDeals = async (page = 1, q = search) => {
     setLoading(true);
     try {
       const result = await getAll(page, q);
-      setAuthorities(result.data);
+      setDeals(result.data);
       setPagination(result.pagination);
     } catch {
       showToast("حدث خطأ أثناء تحميل البيانات", "error");
@@ -36,42 +39,56 @@ export default function ContractingAuthorityPage({ activeService, onServiceChang
     }
   };
 
-  useEffect(() => { fetchAuthorities(1, ""); }, []);
+  useEffect(() => { fetchDeals(1, ""); }, []);
 
   useEffect(() => {
     if (activeService === "add") {
-      setEditAuthority(null);
+      setEditDeal(null);
       setFormOpen(true);
     }
   }, [activeService]);
 
   const handleSearch = (q) => {
     setSearch(q);
-    fetchAuthorities(1, q);
+    fetchDeals(1, q);
   };
 
-  const handlePageChange = (page) => fetchAuthorities(page, search);
+  const handlePageChange = (page) => fetchDeals(page, search);
 
-  const handleEdit = (authority) => {
-    setEditAuthority(authority);
+  const handleEdit = (deal) => {
+    setEditDeal(deal);
     setFormOpen(true);
   };
 
-  const handleDeleteClick = (authority) => setDeleteTarget(authority);
+  const handleDeleteClick = (deal) => setDeleteTarget(deal);
+
+  const handleView = (deal) => setSelectedDeal(deal);
+
+  // Ctrl+F1: open the currently selected row, only while the deals section is mounted
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === "F1") {
+        e.preventDefault();
+        if (selectedRow) handleView(selectedRow);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedRow]);
 
   const handleFormSave = async (data, id) => {
     try {
       if (id) {
         await update(id, data);
-        showToast("تم تحديث المصلحة المتعاقدة بنجاح");
+        showToast("تم تحديث الصفقة بنجاح");
       } else {
         await create(data);
-        showToast("تمت إضافة المصلحة المتعاقدة بنجاح");
+        showToast("تمت إضافة الصفقة بنجاح");
       }
       setFormOpen(false);
-      setEditAuthority(null);
+      setEditDeal(null);
       onServiceChange?.("list");
-      fetchAuthorities(pagination.page, search);
+      fetchDeals(pagination.page, search);
     } catch (err) {
       throw err;
     }
@@ -79,20 +96,24 @@ export default function ContractingAuthorityPage({ activeService, onServiceChang
 
   const handleFormCancel = () => {
     setFormOpen(false);
-    setEditAuthority(null);
+    setEditDeal(null);
     onServiceChange?.("list");
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     await remove(deleteTarget.id);
-    showToast("تم حذف المصلحة المتعاقدة بنجاح");
+    showToast("تم حذف الصفقة بنجاح");
     setDeleteTarget(null);
-    const newPage = authorities.length === 1 && pagination.page > 1
+    const newPage = deals.length === 1 && pagination.page > 1
       ? pagination.page - 1
       : pagination.page;
-    fetchAuthorities(newPage, search);
+    fetchDeals(newPage, search);
   };
+
+  if (selectedDeal) {
+    return <DealDetail deal={selectedDeal} onBack={() => setSelectedDeal(null)} />;
+  }
 
   return (
     <div className="space-y-4">
@@ -104,44 +125,47 @@ export default function ContractingAuthorityPage({ activeService, onServiceChang
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{ backgroundColor: COLOR + "18" }}
           >
-            <Building2 size={18} style={{ color: COLOR }} />
+            <Handshake size={18} style={{ color: COLOR }} />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-800 leading-tight">المصلحة المتعاقدة</h2>
+            <h2 className="text-base font-bold text-slate-800 leading-tight">الصفقات</h2>
             <p className="text-xs text-slate-400 leading-tight">
-              {(pagination?.total ?? 0) > 0 ? `${pagination.total} مصلحة مسجلة` : "إدارة المصلحة المتعاقدة"}
+              {(pagination?.total ?? 0) > 0 ? `${pagination.total} صفقة مسجلة` : "إدارة الصفقات"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => { setEditAuthority(null); setFormOpen(true); }}
+            onClick={() => { setEditDeal(null); setFormOpen(true); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium shadow-sm hover:opacity-90 transition-opacity shrink-0"
             style={{ backgroundColor: COLOR }}
           >
             <Plus size={16} />
-            إضافة مصلحة جديدة
+            إضافة صفقة جديدة
           </button>
         </div>
       </div>
 
       {/* List */}
-      <ContractingAuthoritiesList
-        authorities={authorities}
+      <DealsList
+        deals={deals}
         loading={loading}
         pagination={pagination}
         search={search}
         onSearch={handleSearch}
         onPageChange={handlePageChange}
+        onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
         activeService={activeService}
+        selectedRow={selectedRow}
+        onSelectRow={setSelectedRow}
       />
 
       {/* Form Modal */}
       {formOpen && (
-        <ContractingAuthorityForm
-          authority={editAuthority}
+        <DealForm
+          deal={editDeal}
           onSave={handleFormSave}
           onCancel={handleFormCancel}
         />
@@ -149,8 +173,8 @@ export default function ContractingAuthorityPage({ activeService, onServiceChang
 
       {/* Delete Modal */}
       {deleteTarget && (
-        <ContractingAuthorityDeleteModal
-          authority={deleteTarget}
+        <DealDeleteModal
+          deal={deleteTarget}
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteTarget(null)}
         />

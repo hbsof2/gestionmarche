@@ -1,4 +1,9 @@
-const { Pool } = require("pg");
+const { Pool, types } = require("pg");
+
+// DATE columns (OID 1082) are parsed by pg into local-timezone JS Date objects,
+// which then serialize to a shifted UTC day (e.g. "2026-01-01" -> "2025-12-31T23:00:00.000Z").
+// Keep them as the raw "YYYY-MM-DD" string from Postgres instead.
+types.setTypeParser(1082, (val) => val);
 
 function parseConnectionString(url) {
   const match = url.match(

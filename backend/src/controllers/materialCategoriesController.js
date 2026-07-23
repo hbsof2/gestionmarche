@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const tableExists = require("../utils/tableExists");
 
 async function getAllCategories(req, res) {
   const { search = "" } = req.query;
@@ -62,6 +63,17 @@ async function updateCategory(req, res) {
 
 async function deleteCategory(req, res) {
   try {
+    if (await tableExists(pool, "deal_items")) {
+      const { rows: usage } = await pool.query(
+        `SELECT COUNT(*) FROM deal_items di
+         JOIN raw_materials rm ON rm.id = di.material_id
+         WHERE rm.category_id = $1`,
+        [req.params.id]
+      );
+      if (parseInt(usage[0].count) > 0) {
+        return res.status(400).json({ error: "لا يمكن حذف هذا الصنف لأنه مرتبط بصفقة أو أكثر" });
+      }
+    }
     const { rows } = await pool.query(
       "DELETE FROM material_categories WHERE id=$1 RETURNING id, name_ar",
       [req.params.id]

@@ -4,6 +4,7 @@ import RawMaterialsPage from "@/components/raw-materials/RawMaterialsPage";
 import ContractingAuthorityPage from "@/components/contracting-authority/ContractingAuthorityPage";
 import AuthorityBranchesPage from "@/components/authority-branches/AuthorityBranchesPage";
 import ContractorPage from "@/components/contractor/ContractorPage";
+import DealsPage from "@/components/deals/DealsPage";
 import {
   Package,
   Building2,
@@ -319,6 +320,11 @@ export default function Dashboard() {
             />
           ) : activeSection === "contractor" ? (
             <ContractorPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : activeSection === "deals" ? (
+            <DealsPage
               activeService={activeService}
               onServiceChange={setActiveService}
             />

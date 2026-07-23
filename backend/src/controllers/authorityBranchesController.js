@@ -93,6 +93,13 @@ async function updateBranch(req, res) {
 
 async function deleteBranch(req, res) {
   try {
+    const { rows: linkedRows } = await pool.query(
+      "SELECT COUNT(*) FROM deal_branches WHERE branch_id = $1",
+      [req.params.id]
+    );
+    if (parseInt(linkedRows[0].count) > 0) {
+      return res.status(400).json({ error: "لا يمكن حذف هذا الفرع لأنه مرتبط بصفقة أو أكثر" });
+    }
     const { rows } = await pool.query(
       "DELETE FROM authority_branches WHERE id=$1 RETURNING id, name",
       [req.params.id]

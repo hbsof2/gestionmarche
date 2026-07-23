@@ -35,6 +35,9 @@ node database/scripts/run_migration.js 004_contracting_authority.sql
 node database/scripts/run_migration.js 005_authority_branches.sql
 node database/scripts/run_migration.js 006_alter_authority_branches.sql
 node database/scripts/run_migration.js 007_contractors.sql
+node database/scripts/run_migration.js 008_deals.sql
+node database/scripts/run_migration.js 009_deal_branches.sql
+node database/scripts/run_migration.js 010_fix_deal_branches_cascade.sql
 # defaults to 001_raw_materials.sql if no argument given
 ```
 
@@ -71,18 +74,27 @@ Key files:
 - `app/api/test-connection/route.js` — Next.js API route for connection health check
 - `src/data/` — static reference datasets bundled with the frontend (e.g. `algeria-wilayas.js`: all 58 wilayas with their communes in Arabic, keyed by `code`). Import directly; these are not fetched from the API.
 
+**Date fields** — every date input (`ContractorForm.jsx`: `birth_date`/`rc_date`, `ContractingAuthorityForm.jsx`: `rc_date`, `AuthorityBranchForm.jsx`: `rc_date`, `DealForm.jsx`: `start_date`/`end_date`) uses the same pattern instead of `<input type="date">`: three `<select>`s (day 1–31, Arabic month names, year range) backed by local `useState`, a `pad()` helper, and a `parseDate(isoDate)` helper that does `isoDate.split("T")[0].split("-")` to prefill from an existing record. On submit the date is built as a plain template-literal string (`` `${year}-${pad(month)}-${pad(day)}` ``) — **never** via `new Date(...).toISOString()`, which reintroduces the timezone-shift bug described in the `db.js` quirk above. List components display dates the same defensive way (`DealsList.jsx`'s `formatDate`: split on `"T"` then `"-"`, never `new Date(x).toLocaleDateString()`). Follow this exact pattern for any new date field.
+
+**Searchable select** — `DealForm.jsx` has a local `SearchableSelect` component (type-to-filter dropdown over a fetched list, e.g. contractors/authorities) used for FK fields instead of a plain `<select>` with hundreds of options. Reuse or copy this pattern for future FK pickers rather than a native `<select>`.
+
+**Deal detail / branches** — clicking a deal in `DealsList.jsx` opens `DealDetail.jsx` (full-page view, not a modal) showing the deal's linked `authority_branches` via the `deal_branches` join table. It has its own `BranchSearchableSelect` (same type-to-filter pattern as above) to add a branch, and calls `getDealBranches`/`addBranchToDeal`/`removeBranchFromDeal` from `dealsService.js`. A deal must always keep at least one branch — `removeBranchFromDeal` on the backend rejects removing the last one.
+
 ### Backend (`backend/src/`)
 
 `server.js` imports all route files and mounts them under `/api/<section>`. Logic lives in `controllers/` — routes are thin and only wire up multer and call the controller.
 
-- `config/db.js` — exports a `pg.Pool`. **Critical quirk:** Supabase wraps passwords that contain special characters in `[...]` in the connection string — `db.js` strips those brackets before passing credentials to pg.
+- `config/db.js` — exports a `pg.Pool`. **Critical quirk #1:** Supabase wraps passwords that contain special characters in `[...]` in the connection string — `db.js` strips those brackets before passing credentials to pg. **Critical quirk #2:** `pg` parses `DATE` columns (OID `1082`) into local-timezone JS `Date` objects by default, which then serialize to a UTC ISO string shifted back a day (e.g. `2026-01-01` → `2025-12-31T23:00:00.000Z`) whenever the server's local timezone is ahead of UTC. `db.js` overrides that type parser to keep `DATE` values as the raw `"YYYY-MM-DD"` string — don't remove this, and don't reintroduce `new Date(...)`/`.toISOString()` round-trips for date fields anywhere in the stack (controllers or frontend forms should build/parse date strings manually, see the date-picker pattern below).
 - `controllers/rawMaterialsController.js` — the reference implementation for all future controllers: pagination+search on GET, input validation returning Arabic error messages, Supabase Storage upload via service-role client. `materialCategoriesController.js`, `contractingAuthorityController.js`, `authorityBranchesController.js`, and `contractorsController.js` follow the same shape (list with `page`/`search` query params + pagination envelope, `getById`, `create`/`update` with shared field validation, `remove`) — none of them use Storage upload, only `rawMaterialsController.js` does.
+- `controllers/contractorsController.js` and `contractingAuthorityController.js` additionally accept an optional `limit` query param (default `10`, capped at `1000`) on `getAll` — used by `DealForm.jsx` to pull the full list for its searchable-select dropdowns instead of just one paginated page.
+- `controllers/dealsController.js` — first controller to `JOIN` across tables: `getAll`/`getById` join `contractors` and `contracting_authorities` to return `contractor_name`/`authority_name` alongside the deal row. `create`/`update` validate that `end_date` is strictly after `start_date` and translate the `23505` unique-violation Postgres error code (duplicate `reference`) into an Arabic message. It also owns the `deal_branches` join-table endpoints — `getDealBranches`, `addBranchToDeal`, `removeBranchFromDeal` (mounted at `/api/deals/:id/branches` in `routes/deals.js`, declared **before** the `/:id` routes) — `removeBranchFromDeal` refuses to remove a deal's last remaining branch. Use this controller as the reference for any future section with FK relationships (`receipts`, `invoices`).
 - `middleware/auth.js` — validates Supabase JWT via `supabase.auth.getUser(token)` (service role key). **Not currently applied to any route** — routes are unprotected until a section wires it in.
 - `middleware/validation.js` — a generic Joi-schema `validate()` wrapper. Scaffolded but unused; controllers currently do validation inline instead (see `rawMaterialsController.js`).
 - `routes/users.js` — uses Supabase Admin API instead of pg (no `users` table).
 - `routes/rawMaterials.js` — declares `/upload-image` **before** `/:id` to prevent route conflict; uses multer memory storage (5 MB limit, images only).
-- `routes/deals.js`, `receipts.js`, `invoices.js`, `backup.js` — **stub routes**, not yet backed by a controller or migration. They query pg tables (`deals`, …) that don't exist yet, or return `{ message: "... — to be implemented" }` placeholders. Follow the "Adding a New Section" pattern below to flesh one out.
+- `routes/receipts.js`, `invoices.js`, `backup.js` — **stub routes**, not yet backed by a controller or migration. They query pg tables that don't exist yet, or return `{ message: "... — to be implemented" }` placeholders. Follow the "Adding a New Section" pattern below to flesh one out.
 - `utils/email.js` — `sendEmail()` stub used by `routes/backup.js`; only logs to console, no provider (nodemailer/Resend/SendGrid) configured yet.
+- `utils/tableExists.js` — `tableExists(client, tableName)` checks `information_schema.tables` before querying a table that may not exist yet (e.g. `deal_items`, `receipts`); used by controllers' `remove`/`delete*` functions to guard forward-looking relationship checks. See [Deletion Protection Rules](#deletion-protection-rules).
 
 ### Database
 
@@ -104,8 +116,11 @@ Migrations are plain SQL in `database/migrations/`, numbered `001_`, `002_`, …
 | `005_authority_branches.sql` | `authority_branches` table, indexes on `name`/`wilaya`, trigger, RLS — no FK to `contracting_authorities` (linked later in deals) |
 | `006_alter_authority_branches.sql` | drops `NOT NULL` on `authority_branches.nis`/`nif`/`rc_number`/`rc_date` — those fields are optional |
 | `007_contractors.sql` | `contractors` table, indexes on `full_name`/`wilaya`, trigger, RLS |
+| `008_deals.sql` | `deals` table (`reference` UNIQUE, FKs to `contractors`/`contracting_authorities`), indexes on `reference`/`contractor_id`/`authority_id`, trigger, RLS |
+| `009_deal_branches.sql` | `deal_branches` join table (`deal_id`+`branch_id` FKs, `UNIQUE(deal_id, branch_id)`), indexes on both FK columns, RLS — originally `deal_id` was `ON DELETE CASCADE` |
+| `010_fix_deal_branches_cascade.sql` | drops and recreates the `deal_branches.deal_id` FK as `ON DELETE RESTRICT`, so the DB itself blocks deleting a deal that still has branches (backstops the application-level check in `dealsController.js`) |
 
-Note the numbering gap in section names vs files: `contracting-authority` is section 2 in the UI/route table below but its migration is `004` (`003` was already taken by `material_categories`). Don't assume section order matches migration number. Similarly `006` was consumed by an *alter* migration on `authority_branches`, not a new table — `contractors` is `007`.
+Note the numbering gap in section names vs files: `contracting-authority` is section 2 in the UI/route table below but its migration is `004` (`003` was already taken by `material_categories`). Don't assume section order matches migration number. Similarly `006` was consumed by an *alter* migration on `authority_branches`, not a new table — `contractors` is `007`, `deals` is `008`.
 
 ## Environment Variables
 
@@ -176,6 +191,15 @@ Applies to every table component (existing and future) across all sections.
 - Create a `categories/` subfolder under the section's component directory with its own `*Page`, `*List`, `*Form`, `*DeleteModal`.
 - Add `showCategories` state to the parent `*Page`; render `<SubPage />` when true with a breadcrumb back button (no changes to `page.js` needed).
 - The sub-section's `*Page` is self-contained: it owns its own fetch/toast/modal state and does not receive `activeService` props.
+
+## Deletion Protection Rules
+
+- NEVER delete a record that is linked to another table
+- Always check relationships before deleting in the controller
+- Return HTTP 400 with Arabic error message if record is linked
+- Frontend delete modals must handle HTTP 400 and show Arabic error
+- Use `tableExists()` helper (`backend/src/utils/tableExists.js`) before querying future tables
+- This rule applies to ALL tables in the project
 
 ## API Route Conventions
 

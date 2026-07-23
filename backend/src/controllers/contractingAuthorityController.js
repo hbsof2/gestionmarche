@@ -1,8 +1,8 @@
 const pool = require("../config/db");
 
 async function getAllAuthorities(req, res) {
-  const { page = 1, search = "" } = req.query;
-  const limit = 10;
+  const { page = 1, search = "", limit: limitParam } = req.query;
+  const limit = limitParam ? Math.min(parseInt(limitParam), 1000) : 10;
   const offset = (parseInt(page) - 1) * limit;
   try {
     const pattern = `%${search}%`;
@@ -97,6 +97,13 @@ async function updateAuthority(req, res) {
 
 async function deleteAuthority(req, res) {
   try {
+    const { rows: linkedRows } = await pool.query(
+      "SELECT COUNT(*) FROM deals WHERE authority_id = $1",
+      [req.params.id]
+    );
+    if (parseInt(linkedRows[0].count) > 0) {
+      return res.status(400).json({ error: "لا يمكن حذف هذه المصلحة المتعاقدة لأنها مرتبطة بصفقة أو أكثر" });
+    }
     const { rows } = await pool.query(
       "DELETE FROM contracting_authorities WHERE id=$1 RETURNING id, name",
       [req.params.id]

@@ -85,18 +85,13 @@ export default function AuthorityBranchesPage({ activeService, onServiceChange }
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    try {
-      await remove(deleteTarget.id);
-      showToast("تم حذف فرع المصلحة المتعاقدة بنجاح");
-      setDeleteTarget(null);
-      const newPage = branches.length === 1 && pagination.page > 1
-        ? pagination.page - 1
-        : pagination.page;
-      fetchBranches(newPage, search);
-    } catch (err) {
-      showToast(err.arabicMessage || "حدث خطأ أثناء الحذف", "error");
-      setDeleteTarget(null);
-    }
+    await remove(deleteTarget.id);
+    showToast("تم حذف فرع المصلحة المتعاقدة بنجاح");
+    setDeleteTarget(null);
+    const newPage = branches.length === 1 && pagination.page > 1
+      ? pagination.page - 1
+      : pagination.page;
+    fetchBranches(newPage, search);
   };
 
   return (

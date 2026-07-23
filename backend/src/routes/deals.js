@@ -1,62 +1,23 @@
 const router = require("express").Router();
-const pool = require("../config/db");
+const {
+  getAll,
+  getById,
+  create,
+  update,
+  remove,
+  getDealBranches,
+  addBranchToDeal,
+  removeBranchFromDeal,
+} = require("../controllers/dealsController");
 
-// GET /api/deals
-router.get("/", async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      "SELECT * FROM deals ORDER BY id ASC"
-    );
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get("/:id/branches", getDealBranches);
+router.post("/:id/branches", addBranchToDeal);
+router.delete("/:id/branches/:branchId", removeBranchFromDeal);
 
-// GET /api/deals/:id
-router.get("/:id", async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      "SELECT * FROM deals WHERE id = $1",
-      [req.params.id]
-    );
-    if (!rows.length) return res.status(404).json({ error: "Not found" });
-    res.json(rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/deals
-router.post("/", async (req, res) => {
-  try {
-    res.status(201).json({ message: "Create deal — to be implemented" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// PUT /api/deals/:id
-router.put("/:id", async (req, res) => {
-  try {
-    res.json({ message: "Update deal — to be implemented" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// DELETE /api/deals/:id
-router.delete("/:id", async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      "DELETE FROM deals WHERE id=$1 RETURNING id",
-      [req.params.id]
-    );
-    if (!rows.length) return res.status(404).json({ error: "Not found" });
-    res.json({ deleted: rows[0].id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get("/", getAll);
+router.get("/:id", getById);
+router.post("/", create);
+router.put("/:id", update);
+router.delete("/:id", remove);
 
 module.exports = router;

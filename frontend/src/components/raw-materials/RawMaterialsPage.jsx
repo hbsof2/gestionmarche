@@ -86,18 +86,13 @@ export default function RawMaterialsPage({ activeService, onServiceChange }) {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    try {
-      await remove(deleteTarget.id);
-      showToast("تم حذف المادة بنجاح");
-      setDeleteTarget(null);
-      const newPage = materials.length === 1 && pagination.page > 1
-        ? pagination.page - 1
-        : pagination.page;
-      fetchMaterials(newPage, search);
-    } catch (err) {
-      showToast(err.arabicMessage || "حدث خطأ أثناء الحذف", "error");
-      setDeleteTarget(null);
-    }
+    await remove(deleteTarget.id);
+    showToast("تم حذف المادة بنجاح");
+    setDeleteTarget(null);
+    const newPage = materials.length === 1 && pagination.page > 1
+      ? pagination.page - 1
+      : pagination.page;
+    fetchMaterials(newPage, search);
   };
 
   if (showCategories) {

@@ -68,15 +68,10 @@ export default function MaterialCategoriesPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    try {
-      await remove(deleteTarget.id);
-      showToast("تم حذف الصنف بنجاح");
-      setDeleteTarget(null);
-      fetchCategories(search);
-    } catch (err) {
-      showToast(err.arabicMessage || "حدث خطأ أثناء الحذف", "error");
-      setDeleteTarget(null);
-    }
+    await remove(deleteTarget.id);
+    showToast("تم حذف الصنف بنجاح");
+    setDeleteTarget(null);
+    fetchCategories(search);
   };
 
   return (

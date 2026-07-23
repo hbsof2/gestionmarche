@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
-export default function MaterialCategoryDeleteModal({ category, onConfirm, onCancel }) {
+export default function DealDeleteModal({ deal, onConfirm, onCancel }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,8 +26,8 @@ export default function MaterialCategoryDeleteModal({ category, onConfirm, onCan
             <Trash2 size={24} className="text-red-500" />
           </div>
           <h3 className="text-base font-bold text-slate-800 mb-2">تأكيد الحذف</h3>
-          <p className="text-sm text-slate-500 mb-1">هل أنت متأكد من حذف الصنف:</p>
-          <p className="text-sm font-bold text-slate-800 mb-2">&quot;{category.name_ar}&quot;</p>
+          <p className="text-sm text-slate-500 mb-1">هل أنت متأكد من حذف الصفقة:</p>
+          <p className="text-sm font-bold text-slate-800 mb-2">&quot;{deal.reference}&quot;</p>
           <p className="text-xs text-slate-400 mb-6">لا يمكن التراجع عن هذا الإجراء</p>
 
           {error && (

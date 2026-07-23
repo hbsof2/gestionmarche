@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const tableExists = require("../utils/tableExists");
 const { createClient } = require("@supabase/supabase-js");
 
 const supabase = createClient(
@@ -85,14 +86,17 @@ async function updateMaterial(req, res) {
 
 async function deleteMaterial(req, res) {
   try {
-    // TODO: uncomment when deals table exists
-    // const { rows: usage } = await pool.query(
-    //   "SELECT id FROM deal_items WHERE raw_material_id=$1 LIMIT 1",
-    //   [req.params.id]
-    // );
-    // if (usage.length) {
-    //   return res.status(409).json({ error: "لا يمكن حذف هذه المادة لأنها مستخدمة في صفقة" });
-    // }
+    const linkedTables = ["deal_items", "receipt_items"];
+    for (const table of linkedTables) {
+      if (!(await tableExists(pool, table))) continue;
+      const { rows: usage } = await pool.query(
+        `SELECT COUNT(*) FROM ${table} WHERE material_id = $1`,
+        [req.params.id]
+      );
+      if (parseInt(usage[0].count) > 0) {
+        return res.status(400).json({ error: "لا يمكن حذف هذه المادة الأولية لأنها مرتبطة بصفقة أو وصل تسليم" });
+      }
+    }
     const { rows } = await pool.query(
       "DELETE FROM raw_materials WHERE id=$1 RETURNING id, name_ar",
       [req.params.id]

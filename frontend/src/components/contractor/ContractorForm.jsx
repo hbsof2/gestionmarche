@@ -21,7 +21,7 @@ function pad(n) {
 
 function parseDate(isoDate) {
   if (!isoDate) return { day: "", month: "", year: "" };
-  const [year, month, day] = isoDate.split("-");
+  const [year, month, day] = isoDate.split("T")[0].split("-");
   return { day: parseInt(day, 10), month: parseInt(month, 10), year: parseInt(year, 10) };
 }
 
