@@ -101,13 +101,13 @@ export default function RawMaterialsPage({ activeService, onServiceChange }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowCategories(false)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-100 transition-colors border border-slate-200"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
           >
             <Package size={15} />
             المواد الأولية
           </button>
-          <span className="text-slate-300 text-sm">/</span>
-          <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+          <span className="text-slate-300 dark:text-slate-600 text-sm">/</span>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
             <Tag size={14} style={{ color: "#2D7A4F" }} />
             أصناف المواد الأولية
           </span>
@@ -130,8 +130,8 @@ export default function RawMaterialsPage({ activeService, onServiceChange }) {
             <Package size={18} style={{ color: "#2D7A4F" }} />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-800 leading-tight">المواد الأولية</h2>
-            <p className="text-xs text-slate-400 leading-tight">
+            <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-tight">المواد الأولية</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">
               {(pagination?.total ?? 0) > 0 ? `${pagination.total} مادة مسجلة` : "إدارة المواد الأولية"}
             </p>
           </div>

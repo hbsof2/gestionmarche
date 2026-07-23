@@ -56,32 +56,32 @@ function SearchableSelect({ value, options, getLabel, placeholder, error, onChan
         onClick={() => setOpen((prev) => !prev)}
         className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors flex items-center justify-between gap-2 ${
           error
-            ? "border-red-300 bg-red-50"
-            : "border-slate-200 bg-slate-50"
+            ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30"
+            : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700"
         }`}
       >
-        <span className={selected ? "text-slate-800" : "text-slate-400"}>
+        <span className={selected ? "text-slate-800 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}>
           {selected ? getLabel(selected) : placeholder}
         </span>
-        <ChevronDown size={16} className="text-slate-400 shrink-0" />
+        <ChevronDown size={16} className="text-slate-400 dark:text-slate-500 shrink-0" />
       </button>
 
       {open && (
-        <div className="absolute z-10 mt-1 w-full bg-white rounded-lg border border-slate-200 shadow-lg overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100">
-            <Search size={14} className="text-slate-400 shrink-0" />
+        <div className="absolute z-10 mt-1 w-full bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-lg overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-700">
+            <Search size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
             <input
               autoFocus
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="اكتب للبحث..."
-              className="bg-transparent text-sm w-full outline-none text-slate-700 placeholder:text-slate-400"
+              className="bg-transparent text-sm w-full outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
           <div className="max-h-48 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="px-3 py-3 text-xs text-slate-400 text-center">لا توجد نتائج</p>
+              <p className="px-3 py-3 text-xs text-slate-400 dark:text-slate-500 text-center">لا توجد نتائج</p>
             ) : (
               filtered.map((o) => (
                 <button
@@ -92,8 +92,8 @@ function SearchableSelect({ value, options, getLabel, placeholder, error, onChan
                     setOpen(false);
                     setQuery("");
                   }}
-                  className={`w-full text-right px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
-                    String(o.id) === String(value) ? "bg-slate-50 font-medium" : "text-slate-700"
+                  className={`w-full text-right px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${
+                    String(o.id) === String(value) ? "bg-slate-50 dark:bg-slate-700 font-medium" : "text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   {getLabel(o)}
@@ -182,17 +182,17 @@ export default function DealForm({ deal, onSave, onCancel }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl">
-          <h3 className="text-base font-bold text-slate-800">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 rounded-t-2xl">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
             {isEdit ? "تعديل الصفقة" : "إضافة صفقة جديدة"}
           </h3>
           <button
             onClick={onCancel}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
             <X size={18} />
           </button>
@@ -202,7 +202,7 @@ export default function DealForm({ deal, onSave, onCancel }) {
 
           {/* reference */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               تعيين الصفقة / المرجع <span className="text-red-500">*</span>
             </label>
             <input
@@ -213,8 +213,8 @@ export default function DealForm({ deal, onSave, onCancel }) {
               placeholder="مثال: صفقة-2024-001"
               className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors text-right ${
                 errors.reference
-                  ? "border-red-300 bg-red-50 focus:border-red-400"
-                  : "border-slate-200 bg-slate-50 focus:bg-white"
+                  ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 focus:border-red-400"
+                  : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-700 text-slate-800 dark:text-slate-100"
               }`}
             />
             {errors.reference && <p className="text-xs text-red-500 mt-1">{errors.reference}</p>}
@@ -222,7 +222,7 @@ export default function DealForm({ deal, onSave, onCancel }) {
 
           {/* contractor */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               المتعامل المتعاقد <span className="text-red-500">*</span>
             </label>
             <SearchableSelect
@@ -238,7 +238,7 @@ export default function DealForm({ deal, onSave, onCancel }) {
 
           {/* authority */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               المصلحة المتعاقدة <span className="text-red-500">*</span>
             </label>
             <SearchableSelect
@@ -254,7 +254,7 @@ export default function DealForm({ deal, onSave, onCancel }) {
 
           {/* start_date */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               تاريخ بداية الصفقة <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -263,8 +263,8 @@ export default function DealForm({ deal, onSave, onCancel }) {
                 onChange={(e) => setStartDay(parseInt(e.target.value, 10))}
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.start_date
-                    ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 focus:border-red-400"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">اليوم</option>
@@ -275,8 +275,8 @@ export default function DealForm({ deal, onSave, onCancel }) {
                 onChange={(e) => setStartMonth(parseInt(e.target.value, 10))}
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.start_date
-                    ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 focus:border-red-400"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">الشهر</option>
@@ -287,8 +287,8 @@ export default function DealForm({ deal, onSave, onCancel }) {
                 onChange={(e) => setStartYear(parseInt(e.target.value, 10))}
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.start_date
-                    ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 focus:border-red-400"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">السنة</option>
@@ -300,7 +300,7 @@ export default function DealForm({ deal, onSave, onCancel }) {
 
           {/* end_date */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               تاريخ نهاية الصفقة <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -309,8 +309,8 @@ export default function DealForm({ deal, onSave, onCancel }) {
                 onChange={(e) => setEndDay(parseInt(e.target.value, 10))}
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.end_date
-                    ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 focus:border-red-400"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">اليوم</option>
@@ -321,8 +321,8 @@ export default function DealForm({ deal, onSave, onCancel }) {
                 onChange={(e) => setEndMonth(parseInt(e.target.value, 10))}
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.end_date
-                    ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 focus:border-red-400"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">الشهر</option>
@@ -333,8 +333,8 @@ export default function DealForm({ deal, onSave, onCancel }) {
                 onChange={(e) => setEndYear(parseInt(e.target.value, 10))}
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.end_date
-                    ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    ? "border-red-300 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 focus:border-red-400"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">السنة</option>
@@ -346,8 +346,8 @@ export default function DealForm({ deal, onSave, onCancel }) {
 
           {/* total_amount */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              المبلغ الإجمالي للصفقة بالدينار الجزائري <span className="text-slate-400 font-normal">(اختياري)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              المبلغ الإجمالي للصفقة بالدينار الجزائري <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري)</span>
             </label>
             <input
               type="number"
@@ -357,13 +357,13 @@ export default function DealForm({ deal, onSave, onCancel }) {
               value={form.total_amount}
               onChange={(e) => set("total_amount", e.target.value)}
               placeholder="مثال: 1500000.00"
-              className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-sm outline-none focus:bg-white transition-colors text-right"
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors text-right"
             />
           </div>
 
           {/* Submit error */}
           {errors.submit && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2.5 border border-red-100">
+            <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 rounded-lg px-3 py-2.5 border border-red-100 dark:border-red-500/30">
               {errors.submit}
             </p>
           )}
@@ -382,7 +382,7 @@ export default function DealForm({ deal, onSave, onCancel }) {
               type="button"
               onClick={onCancel}
               disabled={submitting}
-              className="flex-1 py-2.5 rounded-xl text-slate-600 text-sm font-medium bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-60"
+              className="flex-1 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-60"
             >
               إلغاء
             </button>

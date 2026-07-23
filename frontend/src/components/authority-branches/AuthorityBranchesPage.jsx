@@ -107,8 +107,8 @@ export default function AuthorityBranchesPage({ activeService, onServiceChange }
             <GitBranch size={18} style={{ color: COLOR }} />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-800 leading-tight">فروع المصلحة المتعاقدة</h2>
-            <p className="text-xs text-slate-400 leading-tight">
+            <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-tight">فروع المصلحة المتعاقدة</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">
               {(pagination?.total ?? 0) > 0 ? `${pagination.total} فرع مسجل` : "إدارة فروع المصلحة المتعاقدة"}
             </p>
           </div>

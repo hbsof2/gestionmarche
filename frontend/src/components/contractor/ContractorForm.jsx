@@ -101,17 +101,17 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl">
-          <h3 className="text-base font-bold text-slate-800">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 rounded-t-2xl">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
             {isEdit ? "تعديل المتعامل المتعاقد" : "إضافة متعامل جديد"}
           </h3>
           <button
             onClick={onCancel}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
             <X size={18} />
           </button>
@@ -121,7 +121,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
 
           {/* designation */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               تعيين المتعامل المتعاقد <span className="text-red-500">*</span>
             </label>
             <input
@@ -132,7 +132,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
               className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                 errors.designation
                   ? "border-red-300 bg-red-50 focus:border-red-400"
-                  : "border-slate-200 bg-slate-50 focus:bg-white"
+                  : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
               }`}
             />
             {errors.designation && <p className="text-xs text-red-500 mt-1">{errors.designation}</p>}
@@ -140,7 +140,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
 
           {/* full_name */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               الإسم واللقب <span className="text-red-500">*</span>
             </label>
             <input
@@ -150,7 +150,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
               className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                 errors.full_name
                   ? "border-red-300 bg-red-50 focus:border-red-400"
-                  : "border-slate-200 bg-slate-50 focus:bg-white"
+                  : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
               }`}
             />
             {errors.full_name && <p className="text-xs text-red-500 mt-1">{errors.full_name}</p>}
@@ -158,7 +158,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
 
           {/* birth_date */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               تاريخ الميلاد <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -168,7 +168,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.birth_date
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">اليوم</option>
@@ -180,7 +180,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.birth_date
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">الشهر</option>
@@ -192,7 +192,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.birth_date
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">السنة</option>
@@ -205,7 +205,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
           {/* wilaya / commune */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 الولاية <span className="text-red-500">*</span>
               </label>
               <select
@@ -214,7 +214,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.wilaya
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">-- اختر الولاية --</option>
@@ -226,7 +226,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 البلدية <span className="text-red-500">*</span>
               </label>
               <select
@@ -236,7 +236,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   errors.commune
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">-- اختر البلدية --</option>
@@ -251,7 +251,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
           {/* nis / nif */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 الرقم الإحصائي (NIS) <span className="text-red-500">*</span>
               </label>
               <input
@@ -262,13 +262,13 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.nis
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               />
               {errors.nis && <p className="text-xs text-red-500 mt-1">{errors.nis}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 الرقم الجبائي (NIF) <span className="text-red-500">*</span>
               </label>
               <input
@@ -279,7 +279,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.nif
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               />
               {errors.nif && <p className="text-xs text-red-500 mt-1">{errors.nif}</p>}
@@ -288,7 +288,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
 
           {/* rc_number */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               رقم السجل التجاري (RC) <span className="text-red-500">*</span>
             </label>
             <input
@@ -299,7 +299,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
               className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                 errors.rc_number
                   ? "border-red-300 bg-red-50 focus:border-red-400"
-                  : "border-slate-200 bg-slate-50 focus:bg-white"
+                  : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
               }`}
             />
             {errors.rc_number && <p className="text-xs text-red-500 mt-1">{errors.rc_number}</p>}
@@ -307,7 +307,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
 
           {/* rc_date */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               تاريخ السجل التجاري <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -317,7 +317,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.rc_date
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">اليوم</option>
@@ -329,7 +329,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.rc_date
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">الشهر</option>
@@ -341,7 +341,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-2 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.rc_date
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               >
                 <option value="">السنة</option>
@@ -353,7 +353,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
 
           {/* address */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               العنوان الكامل <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -363,7 +363,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
               className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors resize-none ${
                 errors.address
                   ? "border-red-300 bg-red-50 focus:border-red-400"
-                  : "border-slate-200 bg-slate-50 focus:bg-white"
+                  : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
               }`}
             />
             {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
@@ -372,7 +372,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
           {/* phone_fixed / phone_mobile */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 رقم الهاتف الثابت <span className="text-red-500">*</span>
               </label>
               <input
@@ -383,13 +383,13 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.phone_fixed
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               />
               {errors.phone_fixed && <p className="text-xs text-red-500 mt-1">{errors.phone_fixed}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 رقم الهاتف المحمول <span className="text-red-500">*</span>
               </label>
               <input
@@ -400,7 +400,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
                 className={`w-full px-3 py-2.5 rounded-lg border text-sm outline-none transition-colors ${
                   errors.phone_mobile
                     ? "border-red-300 bg-red-50 focus:border-red-400"
-                    : "border-slate-200 bg-slate-50 focus:bg-white"
+                    : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700"
                 }`}
               />
               {errors.phone_mobile && <p className="text-xs text-red-500 mt-1">{errors.phone_mobile}</p>}
@@ -409,15 +409,15 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
 
           {/* fax */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              رقم الفاكس <span className="text-slate-400 font-normal">(اختياري)</span>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              رقم الفاكس <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري)</span>
             </label>
             <input
               type="text"
               dir="ltr"
               value={form.fax}
               onChange={(e) => set("fax", e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-sm outline-none focus:bg-white transition-colors"
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors"
             />
           </div>
 
@@ -442,7 +442,7 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
               type="button"
               onClick={onCancel}
               disabled={submitting}
-              className="flex-1 py-2.5 rounded-xl text-slate-600 text-sm font-medium bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-60"
+              className="flex-1 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-60"
             >
               إلغاء
             </button>

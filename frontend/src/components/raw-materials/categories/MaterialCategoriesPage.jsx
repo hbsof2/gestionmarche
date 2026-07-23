@@ -87,8 +87,8 @@ export default function MaterialCategoriesPage() {
             <Tag size={17} style={{ color: "#2D7A4F" }} />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-800 leading-tight">أصناف المواد الأولية</h3>
-            <p className="text-xs text-slate-400 leading-tight">
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-tight">أصناف المواد الأولية</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">
               {categories.length > 0 ? `${categories.length} صنف مسجل` : "إدارة أصناف المواد"}
             </p>
           </div>

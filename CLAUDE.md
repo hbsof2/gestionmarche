@@ -10,7 +10,7 @@ A web platform for managing Algerian public procurement deals (Marchés Publics)
 
 | Layer    | Technology              | Local port | Hosting  |
 |----------|-------------------------|------------|----------|
-| Frontend | Next.js 16 + Tailwind 4 | 3000       | Netlify  |
+| Frontend | Next.js 16 + Tailwind 4 (CSS-first config, no `tailwind.config.js`) | 3000       | Netlify  |
 | Backend  | Node.js + Express       | 5000       | Railway  |
 | Database | PostgreSQL (Supabase)   | —          | Supabase |
 | Storage  | Supabase Storage        | —          | Supabase |
@@ -68,7 +68,7 @@ Verify both layers are running:
 **Service layer** — `src/services/<section>Service.js` wraps the axios calls. Components import from the service, never from `api.js` directly.
 
 Key files:
-- `app/layout.js` — sets `lang="ar" dir="rtl"`, loads Tajawal font
+- `app/layout.js` — sets `lang="ar" dir="rtl"`, loads Tajawal font, wraps `children` in `ThemeProvider`, and inlines an anti-flash-of-wrong-theme script in `<head>` that reads `localStorage.theme` and adds the `dark` class to `<html>` before hydration (`<html>` carries `suppressHydrationWarning` because of this intentional pre-hydration mutation — don't remove it)
 - `src/lib/supabase.js` — anon-key Supabase client + `testConnection()` utility
 - `src/lib/api.js` — axios instance with Arabic error interceptor
 - `app/api/test-connection/route.js` — Next.js API route for connection health check
@@ -151,6 +151,23 @@ FRONTEND_URL=http://localhost:3000
 - **Section color** — each section has a hex color defined in the `sections[]` array in `page.js`. Use it (with opacity suffix like `+ "18"`) for icon backgrounds in that section's components.
 - **Toast notifications** — implemented as local state in `*Page` components (`setTimeout` dismiss after 3.5 s), positioned with `fixed bottom-6 left-1/2 -translate-x-1/2`. Green for success, red for error.
 
+## Dark Mode
+
+Class-based dark mode (not OS `prefers-color-scheme`), toggled manually and persisted in `localStorage`.
+
+- **No `tailwind.config.js`** — this is Tailwind v4, configured entirely in CSS. Dark mode is enabled via `@custom-variant dark (&:where(.dark, .dark *));` in `src/app/globals.css`, which makes every `dark:` utility apply based on a `.dark` class on `<html>` instead of the OS theme.
+- **`ThemeProvider`** (`src/components/layout/ThemeProvider.jsx`) — client-side context wrapping the whole app from `layout.js`. Exposes `useTheme()` → `{ theme, toggleTheme }`. `toggleTheme` flips the class on `document.documentElement`, updates state, and writes `localStorage.setItem('theme', ...)`.
+- **`ThemeToggle`** (`src/components/layout/ThemeToggle.jsx`) — Sun/Moon icon button (lucide-react) in the header next to the user avatar; consumes `useTheme()`. Copy this component's pattern (context consumer, not prop-drilled) for any other theme-aware control.
+- **Anti-flash script** — see the `layout.js` bullet above; this is why `<html>` needs `suppressHydrationWarning`.
+- **Styling convention for new/edited components** — every `bg-white`/`bg-slate-*`/`text-slate-*`/`border-slate-*` utility must have a matching `dark:` variant alongside it. The established shade mapping (light → dark) used across every section:
+  - `bg-white` → `dark:bg-slate-800` (cards, modals, forms) · `bg-slate-50` → `dark:bg-slate-900` (page background) or `dark:bg-slate-700` (nested surfaces, inputs, secondary buttons)
+  - `border-slate-200` → `dark:border-slate-700` · `border-slate-100` → `dark:border-slate-700`
+  - `text-slate-800` → `dark:text-slate-100` · `text-slate-600`/`700` → `dark:text-slate-300` · `text-slate-400` → `dark:text-slate-500` · `text-slate-300` → `dark:text-slate-600`
+  - `hover:bg-slate-50`/`100` → `dark:hover:bg-slate-700`/`600`
+  - `placeholder:text-slate-400` → `dark:placeholder:text-slate-500`
+  - Modal overlays `bg-black/30` → also add `dark:bg-black/50`
+- **Never** add a `dark:` variant to a section's accent-color inline `style={{ backgroundColor: section.color }}` (or `+ "18"` opacity suffix) — accent colors are identical in both themes; only slate-based Tailwind utility classes get dark variants.
+
 ## UI Table Standards
 
 Applies to every table component (existing and future) across all sections.
@@ -177,6 +194,7 @@ Applies to every table component (existing and future) across all sections.
 - Every table must have a loading spinner during API calls
 - Every table must have a search bar
 - Action buttons: edit (blue), delete (red)
+- Every color utility class (backgrounds, borders, text) needs its `dark:` counterpart — see [Dark Mode](#dark-mode)
 - Full RTL support at all times
 - Make sure all new UI components are fully responsive for mobile screens using Tailwind CSS responsive prefixes (`sm:`, `md:`, `lg:`). Full RTL support must be maintained.
 
