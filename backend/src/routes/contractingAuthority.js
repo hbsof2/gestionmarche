@@ -6,11 +6,14 @@ const {
   updateAuthority,
   deleteAuthority,
 } = require("../controllers/contractingAuthorityController");
+const { verifyToken, requirePermission } = require("../middleware/auth");
 
-router.get("/", getAllAuthorities);
-router.get("/:id", getAuthorityById);
-router.post("/", createAuthority);
-router.put("/:id", updateAuthority);
-router.delete("/:id", deleteAuthority);
+const canManage = requirePermission("can_manage_authorities");
+
+router.get("/", verifyToken, getAllAuthorities);
+router.get("/:id", verifyToken, getAuthorityById);
+router.post("/", verifyToken, canManage, createAuthority);
+router.put("/:id", verifyToken, canManage, updateAuthority);
+router.delete("/:id", verifyToken, canManage, deleteAuthority);
 
 module.exports = router;

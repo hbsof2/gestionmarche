@@ -1,11 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import RawMaterialsPage from "@/components/raw-materials/RawMaterialsPage";
 import ContractingAuthorityPage from "@/components/contracting-authority/ContractingAuthorityPage";
 import AuthorityBranchesPage from "@/components/authority-branches/AuthorityBranchesPage";
 import ContractorPage from "@/components/contractor/ContractorPage";
 import DealsPage from "@/components/deals/DealsPage";
+import ReceiptsPage from "@/components/receipts/ReceiptsPage";
+import UsersPage from "@/components/users/UsersPage";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import { isAuthenticated, getUser, logout } from "@/lib/auth";
 import {
   Package,
   Building2,
@@ -134,10 +138,34 @@ const sections = [
   },
 ];
 
+const ROLE_LABEL = { admin: "مدير رئيسي", secondary: "مستخدم ثانوي" };
+
 export default function Dashboard() {
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState("raw-materials");
   const [activeService, setActiveService] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [forbiddenToast, setForbiddenToast] = useState(null);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.replace("/login");
+      return;
+    }
+    setCurrentUser(getUser());
+    setCheckingAuth(false);
+  }, [router]);
+
+  useEffect(() => {
+    const handleForbidden = (e) => {
+      setForbiddenToast(e.detail || "ليس لديك صلاحية للقيام بهذه العملية");
+      setTimeout(() => setForbiddenToast(null), 3500);
+    };
+    window.addEventListener("auth:forbidden", handleForbidden);
+    return () => window.removeEventListener("auth:forbidden", handleForbidden);
+  }, []);
 
   const currentSection = sections.find((s) => s.id === activeSection);
 
@@ -146,6 +174,14 @@ export default function Dashboard() {
     setActiveService(null);
     setSidebarOpen(false);
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="w-8 h-8 rounded-full border-[3px] border-slate-100 dark:border-slate-700 border-t-slate-400 dark:border-t-slate-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -181,12 +217,30 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-            المدير العام
-          </span>
+          <div className="hidden sm:flex flex-col items-end leading-tight">
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+              {currentUser?.full_name}
+            </span>
+            <span
+              className={`text-[10px] font-medium px-1.5 py-0.5 rounded mt-0.5 ${
+                currentUser?.role === "admin"
+                  ? "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400"
+                  : "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
+              }`}
+            >
+              {ROLE_LABEL[currentUser?.role] || ""}
+            </span>
+          </div>
           <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
             <Users size={14} className="text-slate-500 dark:text-slate-400" />
           </div>
+          <button
+            onClick={logout}
+            title="تسجيل الخروج"
+            className="p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+          >
+            <LogOut size={18} />
+          </button>
           <ThemeToggle />
         </div>
       </header>
@@ -295,7 +349,10 @@ export default function Dashboard() {
 
             {/* Sidebar Footer */}
             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 px-2">
-              <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+              <button
+                onClick={logout}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+              >
                 <LogOut size={16} />
                 <span>تسجيل الخروج</span>
               </button>
@@ -327,6 +384,16 @@ export default function Dashboard() {
             />
           ) : activeSection === "deals" ? (
             <DealsPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : activeSection === "receipts" ? (
+            <ReceiptsPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : activeSection === "users" ? (
+            <UsersPage
               activeService={activeService}
               onServiceChange={setActiveService}
             />
@@ -439,6 +506,13 @@ export default function Dashboard() {
           )}
         </main>
       </div>
+
+      {/* Forbidden (403) toast */}
+      {forbiddenToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium bg-red-500 transition-all duration-300 whitespace-nowrap">
+          {forbiddenToast}
+        </div>
+      )}
     </div>
   );
 }

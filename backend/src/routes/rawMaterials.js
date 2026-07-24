@@ -8,6 +8,9 @@ const {
   deleteMaterial,
   uploadImage,
 } = require("../controllers/rawMaterialsController");
+const { verifyToken, requirePermission } = require("../middleware/auth");
+
+const canManage = requirePermission("can_manage_raw_materials");
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -21,12 +24,12 @@ const upload = multer({
 });
 
 // /upload-image must be declared before /:id to avoid route conflict
-router.post("/upload-image", upload.single("image"), uploadImage);
+router.post("/upload-image", verifyToken, canManage, upload.single("image"), uploadImage);
 
-router.get("/", getAllMaterials);
-router.get("/:id", getMaterialById);
-router.post("/", createMaterial);
-router.put("/:id", updateMaterial);
-router.delete("/:id", deleteMaterial);
+router.get("/", verifyToken, getAllMaterials);
+router.get("/:id", verifyToken, getMaterialById);
+router.post("/", verifyToken, canManage, createMaterial);
+router.put("/:id", verifyToken, canManage, updateMaterial);
+router.delete("/:id", verifyToken, canManage, deleteMaterial);
 
 module.exports = router;

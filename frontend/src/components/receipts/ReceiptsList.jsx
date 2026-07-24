@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { Search, Eye, Edit, Trash2, BarChart3, ChevronRight, ChevronLeft } from "lucide-react";
+import { Search, Eye, Edit, Trash2, ChevronRight, ChevronLeft } from "lucide-react";
 
-const COLOR = "#1E8449";
+const COLOR = "#2471A3";
 
 function formatDate(isoDate) {
   if (!isoDate) return "-";
@@ -10,17 +10,8 @@ function formatDate(isoDate) {
   return `${day}/${month}/${year}`;
 }
 
-function formatAmount(amount) {
-  if (amount === null || amount === undefined || amount === "") return "-";
-  const formatted = Number(amount).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${formatted} دج`;
-}
-
-export default function DealsList({
-  deals,
+export default function ReceiptsList({
+  receipts,
   loading,
   pagination,
   search,
@@ -29,10 +20,7 @@ export default function DealsList({
   onView,
   onEdit,
   onDelete,
-  onStats,
   activeService,
-  selectedRow,
-  onSelectRow,
 }) {
   const searchRef = useRef(null);
 
@@ -68,99 +56,80 @@ export default function DealsList({
             style={{ borderTopColor: COLOR, borderWidth: "3px" }}
           />
         </div>
-      ) : deals.length === 0 ? (
+      ) : receipts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center px-4">
           <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center mb-4">
             <Search size={22} className="text-slate-300 dark:text-slate-600" />
           </div>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">لا توجد صفقات</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">لا توجد وصولات</p>
           <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
-            {search ? "لا توجد نتائج لهذا البحث" : "ابدأ بإضافة صفقة جديدة"}
+            {search ? "لا توجد نتائج لهذا البحث" : "ابدأ بإنشاء وصل جديد"}
           </p>
         </div>
       ) : (
         <div className="overflow-x-auto w-full">
-          <table className="table-fixed w-full min-w-[820px] text-sm">
+          <table className="table-fixed w-full min-w-[900px] text-sm">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-700 border-b border-slate-100 dark:border-slate-700">
                 <th className="w-12 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400">#</th>
-                <th className="w-40 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400">المرجع</th>
-                <th className="w-44 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400 hidden sm:table-cell">المتعامل المتعاقد</th>
-                <th className="w-44 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400 hidden md:table-cell">المصلحة المتعاقدة</th>
-                <th className="w-28 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400 hidden lg:table-cell">تاريخ البداية</th>
-                <th className="w-28 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400 hidden lg:table-cell">تاريخ النهاية</th>
-                <th className="w-32 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400 hidden sm:table-cell">المبلغ الإجمالي</th>
-                <th className="w-28 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400">الإجراءات</th>
+                <th className="w-44 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400">المرجع</th>
+                <th className="w-40 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400 hidden sm:table-cell">المتعامل المتعاقد</th>
+                <th className="w-40 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400 hidden md:table-cell">المصلحة المتعاقدة</th>
+                <th className="w-36 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400 hidden lg:table-cell">الفرع</th>
+                <th className="w-28 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400">تاريخ الوصل</th>
+                <th className="w-24 px-3 py-3 text-right whitespace-nowrap font-bold text-base tracking-wide text-slate-500 dark:text-slate-400">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
-              {deals.map((d) => {
-                const isSelected = selectedRow?.id === d.id;
-                return (
+              {receipts.map((r) => (
                 <tr
-                  key={d.id}
-                  tabIndex={0}
-                  title="انقر مرتين للدخول للصفقة"
-                  onClick={() => onSelectRow?.(d)}
-                  onDoubleClick={() => onView(d)}
-                  onKeyDown={(e) => { if (e.key === "Enter") onView(d); }}
-                  className={`cursor-pointer transition-colors border-b border-slate-100 dark:border-slate-700 outline-none ${
-                    isSelected
-                      ? "bg-blue-50 dark:bg-blue-500/10 border-r-4 border-blue-500"
-                      : "hover:bg-slate-50/60 dark:hover:bg-slate-700"
-                  }`}
+                  key={r.id}
+                  onDoubleClick={() => onView(r)}
+                  title="انقر مرتين للدخول للوصل"
+                  className="cursor-pointer transition-colors border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50/60 dark:hover:bg-slate-700"
                 >
-                  <td className="w-12 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 font-mono">{d.id}</td>
-                  <td className="w-40 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100">{d.reference}</td>
-                  <td className="w-44 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 hidden sm:table-cell">{d.contractor_name}</td>
-                  <td className="w-44 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 hidden md:table-cell">{d.authority_name}</td>
-                  <td className="w-28 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 hidden lg:table-cell">{formatDate(d.start_date)}</td>
-                  <td className="w-28 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 hidden lg:table-cell">{formatDate(d.end_date)}</td>
-                  <td className="w-32 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 hidden sm:table-cell">{formatAmount(d.total_amount)}</td>
-                  <td className="w-28 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100">
+                  <td className="w-12 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 font-mono">{r.id}</td>
+                  <td className="w-44 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100">{r.reference}</td>
+                  <td className="w-40 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 hidden sm:table-cell">{r.contractor_name}</td>
+                  <td className="w-40 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 hidden md:table-cell">{r.authority_name}</td>
+                  <td className="w-36 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100 hidden lg:table-cell">{r.branch_name}</td>
+                  <td className="w-28 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100">{formatDate(r.receipt_date)}</td>
+                  <td className="w-24 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-medium text-sm text-slate-800 dark:text-slate-100">
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={(e) => { e.stopPropagation(); onView(d); }}
+                        onClick={(e) => { e.stopPropagation(); onView(r); }}
                         className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10 transition-colors"
                         title="عرض"
                       >
                         <Eye size={15} />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); onEdit(d); }}
+                        onClick={(e) => { e.stopPropagation(); onEdit(r); }}
                         className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
                         title="تعديل"
                       >
                         <Edit size={15} />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); onDelete(d); }}
+                        onClick={(e) => { e.stopPropagation(); onDelete(r); }}
                         className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                         title="حذف"
                       >
                         <Trash2 size={15} />
                       </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onStats(d); }}
-                        className="p-1.5 rounded-lg text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors"
-                        title="عرض الإحصائيات"
-                      >
-                        <BarChart3 size={15} />
-                      </button>
                     </div>
                   </td>
                 </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
       {/* Keyboard navigation hint */}
-      {!loading && deals.length > 0 && (
+      {!loading && receipts.length > 0 && (
         <p className="px-4 text-xs text-slate-400 dark:text-slate-500 text-right mt-2">
-          نصيحة: انقر مرتين على الصفقة أو اضغط Enter أو Ctrl+F1 للدخول إليها
+          نصيحة: انقر مرتين على الوصل للدخول إليه
         </p>
       )}
 
@@ -168,7 +137,7 @@ export default function DealsList({
       {!loading && pagination.totalPages > 1 && (
         <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-xs text-slate-500 dark:text-slate-400 order-2 sm:order-1">
-            {pagination.total} صفقة — صفحة {pagination.page} من {pagination.totalPages}
+            {pagination.total} وصل — صفحة {pagination.page} من {pagination.totalPages}
           </span>
           <div className="flex items-center gap-1 order-1 sm:order-2">
             <button

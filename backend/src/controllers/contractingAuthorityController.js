@@ -8,7 +8,10 @@ async function getAllAuthorities(req, res) {
     const pattern = `%${search}%`;
     const [{ rows: data }, { rows: countRows }] = await Promise.all([
       pool.query(
-        `SELECT * FROM contracting_authorities WHERE name ILIKE $1 ORDER BY id ASC LIMIT $2 OFFSET $3`,
+        `SELECT a.*, u.full_name AS created_by_name
+         FROM contracting_authorities a
+         LEFT JOIN users u ON u.id = a.created_by
+         WHERE a.name ILIKE $1 ORDER BY a.id ASC LIMIT $2 OFFSET $3`,
         [pattern, limit, offset]
       ),
       pool.query(
@@ -29,7 +32,10 @@ async function getAllAuthorities(req, res) {
 async function getAuthorityById(req, res) {
   try {
     const { rows } = await pool.query(
-      "SELECT * FROM contracting_authorities WHERE id = $1",
+      `SELECT a.*, u.full_name AS created_by_name
+       FROM contracting_authorities a
+       LEFT JOIN users u ON u.id = a.created_by
+       WHERE a.id = $1`,
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "المصلحة المتعاقدة غير موجودة" });
@@ -60,11 +66,11 @@ async function createAuthority(req, res) {
   try {
     const { rows } = await pool.query(
       `INSERT INTO contracting_authorities
-        (name, wilaya, commune, nis, nif, rc_number, rc_date, address, phone, fax)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        (name, wilaya, commune, nis, nif, rc_number, rc_date, address, phone, fax, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
         name.trim(), wilaya.trim(), commune.trim(), nis.trim(), nif.trim(),
-        rc_number.trim(), rc_date, address.trim(), phone.trim(), fax?.trim() || null,
+        rc_number.trim(), rc_date, address.trim(), phone.trim(), fax?.trim() || null, req.user.id,
       ]
     );
     res.status(201).json(rows[0]);

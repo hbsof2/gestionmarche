@@ -6,11 +6,14 @@ const {
   update,
   remove,
 } = require("../controllers/contractorsController");
+const { verifyToken, requirePermission } = require("../middleware/auth");
 
-router.get("/", getAll);
-router.get("/:id", getById);
-router.post("/", create);
-router.put("/:id", update);
-router.delete("/:id", remove);
+const canManage = requirePermission("can_manage_contractors");
+
+router.get("/", verifyToken, getAll);
+router.get("/:id", verifyToken, getById);
+router.post("/", verifyToken, canManage, create);
+router.put("/:id", verifyToken, canManage, update);
+router.delete("/:id", verifyToken, canManage, remove);
 
 module.exports = router;

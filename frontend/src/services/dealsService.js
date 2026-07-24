@@ -59,3 +59,8 @@ export async function removeDealItem(dealId, itemId) {
   const { data } = await api.delete(`/api/deals/${dealId}/items/${itemId}`);
   return data;
 }
+
+export async function getDealStats(dealId) {
+  const { data } = await api.get(`/api/deals/${dealId}/stats`);
+  return data;
+}

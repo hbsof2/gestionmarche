@@ -5,6 +5,7 @@ import DealsList from "./DealsList";
 import DealForm from "./DealForm";
 import DealDeleteModal from "./DealDeleteModal";
 import DealDetail from "./DealDetail";
+import DealStats from "./DealStats";
 import { getAll, create, update, remove } from "@/services/dealsService";
 
 const COLOR = "#1E8449";
@@ -18,6 +19,7 @@ export default function DealsPage({ activeService, onServiceChange }) {
   const [editDeal, setEditDeal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [selectedDeal, setSelectedDeal] = useState(null);
+  const [statsDeal, setStatsDeal] = useState(null);
   const [selectedRow, setSelectedRow] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -46,6 +48,14 @@ export default function DealsPage({ activeService, onServiceChange }) {
       setEditDeal(null);
       setFormOpen(true);
     }
+    if (activeService === "stats") {
+      if (selectedRow) {
+        setStatsDeal(selectedRow);
+      } else {
+        showToast("الرجاء تحديد صفقة أولاً بالضغط عليها", "error");
+      }
+      onServiceChange?.("list");
+    }
   }, [activeService]);
 
   const handleSearch = (q) => {
@@ -63,6 +73,8 @@ export default function DealsPage({ activeService, onServiceChange }) {
   const handleDeleteClick = (deal) => setDeleteTarget(deal);
 
   const handleView = (deal) => setSelectedDeal(deal);
+
+  const handleStats = (deal) => setStatsDeal(deal);
 
   // Ctrl+F1: open the currently selected row, only while the deals section is mounted
   useEffect(() => {
@@ -111,6 +123,10 @@ export default function DealsPage({ activeService, onServiceChange }) {
     fetchDeals(newPage, search);
   };
 
+  if (statsDeal) {
+    return <DealStats dealId={statsDeal.id} onBack={() => setStatsDeal(null)} />;
+  }
+
   if (selectedDeal) {
     return <DealDetail deal={selectedDeal} onBack={() => setSelectedDeal(null)} />;
   }
@@ -157,6 +173,7 @@ export default function DealsPage({ activeService, onServiceChange }) {
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
+        onStats={handleStats}
         activeService={activeService}
         selectedRow={selectedRow}
         onSelectRow={setSelectedRow}

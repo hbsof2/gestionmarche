@@ -1,5 +1,4 @@
 const pool = require("../config/db");
-const tableExists = require("../utils/tableExists");
 
 async function getAll(req, res) {
   const { page = 1, search = "" } = req.query;
@@ -10,10 +9,11 @@ async function getAll(req, res) {
     const [{ rows: data }, { rows: countRows }] = await Promise.all([
       pool.query(
         `SELECT d.*, c.designation AS contractor_designation, c.full_name AS contractor_name,
-                a.name AS authority_name
+                a.name AS authority_name, u.full_name AS created_by_name
          FROM deals d
          JOIN contractors c ON c.id = d.contractor_id
          JOIN contracting_authorities a ON a.id = d.authority_id
+         LEFT JOIN users u ON u.id = d.created_by
          WHERE d.reference ILIKE $1
          ORDER BY d.id ASC LIMIT $2 OFFSET $3`,
         [pattern, limit, offset]
@@ -37,10 +37,11 @@ async function getById(req, res) {
   try {
     const { rows } = await pool.query(
       `SELECT d.*, c.designation AS contractor_designation, c.full_name AS contractor_name,
-              a.name AS authority_name
+              a.name AS authority_name, u.full_name AS created_by_name
        FROM deals d
        JOIN contractors c ON c.id = d.contractor_id
        JOIN contracting_authorities a ON a.id = d.authority_id
+       LEFT JOIN users u ON u.id = d.created_by
        WHERE d.id = $1`,
       [req.params.id]
     );
@@ -68,9 +69,9 @@ async function create(req, res) {
   const { reference, contractor_id, authority_id, start_date, end_date, total_amount } = req.body;
   try {
     const { rows } = await pool.query(
-      `INSERT INTO deals (reference, contractor_id, authority_id, start_date, end_date, total_amount)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [reference.trim(), contractor_id, authority_id, start_date, end_date, total_amount || null]
+      `INSERT INTO deals (reference, contractor_id, authority_id, start_date, end_date, total_amount, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [reference.trim(), contractor_id, authority_id, start_date, end_date, total_amount || null, req.user.id]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -114,14 +115,12 @@ async function remove(req, res) {
     if (parseInt(itemRows[0].count) > 0) {
       return res.status(400).json({ error: "لا يمكن حذف هذه الصفقة لأنها تحتوي على مواد أولية مسجلة، قم بحذف المواد أولاً" });
     }
-    if (await tableExists(pool, "receipts")) {
-      const { rows: receiptRows } = await pool.query(
-        "SELECT COUNT(*) FROM receipts WHERE deal_id = $1",
-        [req.params.id]
-      );
-      if (parseInt(receiptRows[0].count) > 0) {
-        return res.status(400).json({ error: "لا يمكن حذف هذه الصفقة لأنها تحتوي على وصولات مرتبطة بها" });
-      }
+    const { rows: receiptRows } = await pool.query(
+      "SELECT COUNT(*) FROM receipts WHERE deal_id = $1",
+      [req.params.id]
+    );
+    if (parseInt(receiptRows[0].count) > 0) {
+      return res.status(400).json({ error: "لا يمكن حذف هذه الصفقة لأنها تحتوي على وصولات مرتبطة بها" });
     }
     const { rows } = await pool.query(
       "DELETE FROM deals WHERE id=$1 RETURNING id, reference",
@@ -270,6 +269,63 @@ async function removeDealItem(req, res) {
   }
 }
 
+async function getDealStats(req, res) {
+  try {
+    const { rows: dealRows } = await pool.query(
+      `SELECT d.reference, d.start_date, d.end_date, c.full_name AS contractor_name,
+              a.name AS authority_name
+       FROM deals d
+       JOIN contractors c ON c.id = d.contractor_id
+       JOIN contracting_authorities a ON a.id = d.authority_id
+       WHERE d.id = $1`,
+      [req.params.id]
+    );
+    if (!dealRows.length) return res.status(404).json({ error: "الصفقة غير موجودة" });
+
+    const { rows: items } = await pool.query(
+      `SELECT
+         di.id,
+         rm.name_ar,
+         rm.name_lat,
+         rm.unit,
+         mc.name_ar AS category_name,
+         di.tva,
+         di.min_quantity,
+         di.max_quantity,
+         di.unit_price,
+         (di.min_quantity * di.unit_price) AS min_total_ht,
+         (di.max_quantity * di.unit_price) AS max_total_ht,
+         (di.min_quantity * di.unit_price * (1 + di.tva/100)) AS min_total_ttc,
+         (di.max_quantity * di.unit_price * (1 + di.tva/100)) AS max_total_ttc,
+         (di.min_quantity * di.unit_price * di.tva/100) AS min_tax_amount,
+         (di.max_quantity * di.unit_price * di.tva/100) AS max_tax_amount
+       FROM deal_items di
+       JOIN raw_materials rm ON di.material_id = rm.id
+       JOIN material_categories mc ON di.category_id = mc.id
+       WHERE di.deal_id = $1
+       ORDER BY di.id`,
+      [req.params.id]
+    );
+
+    const totals = items.reduce(
+      (acc, item) => {
+        acc.total_min_ht += Number(item.min_total_ht);
+        acc.total_max_ht += Number(item.max_total_ht);
+        acc.total_min_ttc += Number(item.min_total_ttc);
+        acc.total_max_ttc += Number(item.max_total_ttc);
+        return acc;
+      },
+      { total_min_ht: 0, total_max_ht: 0, total_min_ttc: 0, total_max_ttc: 0 }
+    );
+    totals.total_tax_min = totals.total_min_ttc - totals.total_min_ht;
+    totals.total_tax_max = totals.total_max_ttc - totals.total_max_ht;
+
+    res.json({ items, totals, deal: dealRows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getAll,
   getById,
@@ -283,4 +339,5 @@ module.exports = {
   addDealItem,
   updateDealItem,
   removeDealItem,
+  getDealStats,
 };

@@ -8,7 +8,10 @@ async function getAll(req, res) {
     const pattern = `%${search}%`;
     const [{ rows: data }, { rows: countRows }] = await Promise.all([
       pool.query(
-        `SELECT * FROM contractors WHERE full_name ILIKE $1 ORDER BY id ASC LIMIT $2 OFFSET $3`,
+        `SELECT c.*, u.full_name AS created_by_name
+         FROM contractors c
+         LEFT JOIN users u ON u.id = c.created_by
+         WHERE c.full_name ILIKE $1 ORDER BY c.id ASC LIMIT $2 OFFSET $3`,
         [pattern, limit, offset]
       ),
       pool.query(
@@ -29,7 +32,10 @@ async function getAll(req, res) {
 async function getById(req, res) {
   try {
     const { rows } = await pool.query(
-      "SELECT * FROM contractors WHERE id = $1",
+      `SELECT c.*, u.full_name AS created_by_name
+       FROM contractors c
+       LEFT JOIN users u ON u.id = c.created_by
+       WHERE c.id = $1`,
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "المتعامل المتعاقد غير موجود" });
@@ -69,12 +75,12 @@ async function create(req, res) {
   try {
     const { rows } = await pool.query(
       `INSERT INTO contractors
-        (designation, full_name, birth_date, wilaya, commune, nis, nif, rc_number, rc_date, address, phone_fixed, phone_mobile, fax)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+        (designation, full_name, birth_date, wilaya, commune, nis, nif, rc_number, rc_date, address, phone_fixed, phone_mobile, fax, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
       [
         designation.trim(), full_name.trim(), birth_date, wilaya.trim(), commune.trim(),
         nis.trim(), nif.trim(), rc_number.trim(), rc_date, address.trim(),
-        phone_fixed.trim(), phone_mobile.trim(), fax?.trim() || null,
+        phone_fixed.trim(), phone_mobile.trim(), fax?.trim() || null, req.user.id,
       ]
     );
     res.status(201).json(rows[0]);

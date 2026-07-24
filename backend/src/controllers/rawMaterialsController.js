@@ -17,7 +17,10 @@ async function getAllMaterials(req, res) {
     const pattern = `%${search}%`;
     const [{ rows: data }, { rows: countRows }] = await Promise.all([
       pool.query(
-        `SELECT * FROM raw_materials WHERE name_ar ILIKE $1 ORDER BY id ASC LIMIT $2 OFFSET $3`,
+        `SELECT rm.*, u.full_name AS created_by_name
+         FROM raw_materials rm
+         LEFT JOIN users u ON u.id = rm.created_by
+         WHERE rm.name_ar ILIKE $1 ORDER BY rm.id ASC LIMIT $2 OFFSET $3`,
         [pattern, limit, offset]
       ),
       pool.query(
@@ -38,7 +41,10 @@ async function getAllMaterials(req, res) {
 async function getMaterialById(req, res) {
   try {
     const { rows } = await pool.query(
-      "SELECT * FROM raw_materials WHERE id = $1",
+      `SELECT rm.*, u.full_name AS created_by_name
+       FROM raw_materials rm
+       LEFT JOIN users u ON u.id = rm.created_by
+       WHERE rm.id = $1`,
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "المادة غير موجودة" });
@@ -55,9 +61,9 @@ async function createMaterial(req, res) {
   if (!VALID_UNITS.includes(unit)) return res.status(400).json({ error: "قيمة الوحدة غير صحيحة" });
   try {
     const { rows } = await pool.query(
-      `INSERT INTO raw_materials (name_ar, name_lat, description, unit, image_url)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [name_ar.trim(), name_lat || null, description || null, unit, image_url || null]
+      `INSERT INTO raw_materials (name_ar, name_lat, description, unit, image_url, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [name_ar.trim(), name_lat || null, description || null, unit, image_url || null, req.user.id]
     );
     res.status(201).json(rows[0]);
   } catch (err) {

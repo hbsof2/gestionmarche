@@ -8,7 +8,10 @@ async function getAllBranches(req, res) {
     const pattern = `%${search}%`;
     const [{ rows: data }, { rows: countRows }] = await Promise.all([
       pool.query(
-        `SELECT * FROM authority_branches WHERE name ILIKE $1 ORDER BY id ASC LIMIT $2 OFFSET $3`,
+        `SELECT b.*, u.full_name AS created_by_name
+         FROM authority_branches b
+         LEFT JOIN users u ON u.id = b.created_by
+         WHERE b.name ILIKE $1 ORDER BY b.id ASC LIMIT $2 OFFSET $3`,
         [pattern, limit, offset]
       ),
       pool.query(
@@ -29,7 +32,10 @@ async function getAllBranches(req, res) {
 async function getBranchById(req, res) {
   try {
     const { rows } = await pool.query(
-      "SELECT * FROM authority_branches WHERE id = $1",
+      `SELECT b.*, u.full_name AS created_by_name
+       FROM authority_branches b
+       LEFT JOIN users u ON u.id = b.created_by
+       WHERE b.id = $1`,
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "فرع المصلحة المتعاقدة غير موجود" });
@@ -56,11 +62,11 @@ async function createBranch(req, res) {
   try {
     const { rows } = await pool.query(
       `INSERT INTO authority_branches
-        (name, wilaya, commune, nis, nif, rc_number, rc_date, address, phone, fax)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        (name, wilaya, commune, nis, nif, rc_number, rc_date, address, phone, fax, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
       [
         name.trim(), wilaya.trim(), commune.trim(), nis?.trim() || null, nif?.trim() || null,
-        rc_number?.trim() || null, rc_date || null, address.trim(), phone.trim(), fax?.trim() || null,
+        rc_number?.trim() || null, rc_date || null, address.trim(), phone.trim(), fax?.trim() || null, req.user.id,
       ]
     );
     res.status(201).json(rows[0]);
@@ -99,6 +105,13 @@ async function deleteBranch(req, res) {
     );
     if (parseInt(linkedRows[0].count) > 0) {
       return res.status(400).json({ error: "لا يمكن حذف هذا الفرع لأنه مرتبط بصفقة أو أكثر" });
+    }
+    const { rows: receiptRows } = await pool.query(
+      "SELECT COUNT(*) FROM receipts WHERE branch_id = $1",
+      [req.params.id]
+    );
+    if (parseInt(receiptRows[0].count) > 0) {
+      return res.status(400).json({ error: "لا يمكن حذف هذا الفرع لأنه مرتبط بوصل أو أكثر" });
     }
     const { rows } = await pool.query(
       "DELETE FROM authority_branches WHERE id=$1 RETURNING id, name",
