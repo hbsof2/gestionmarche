@@ -1,5 +1,4 @@
 const pool = require("../config/db");
-const tableExists = require("../utils/tableExists");
 const createDealSnapshot = require("../utils/dealSnapshot");
 
 const FULL_SELECT = `
@@ -7,6 +6,8 @@ const FULL_SELECT = `
          c.full_name AS contractor_name,
          a.name AS authority_name,
          b.name AS branch_name,
+         b.wilaya AS branch_wilaya,
+         b.commune AS branch_commune,
          u.full_name AS created_by_name
   FROM receipts r
   JOIN deals d ON d.id = r.deal_id
@@ -17,26 +18,37 @@ const FULL_SELECT = `
 `;
 
 async function getAll(req, res) {
-  const { page = 1, search = "" } = req.query;
-  const limit = 10;
-  const offset = (parseInt(page) - 1) * limit;
+  const { search = "", contractor_id, authority_id, deal_id, branch_id } = req.query;
   try {
-    const pattern = `%${search}%`;
-    const [{ rows: data }, { rows: countRows }] = await Promise.all([
-      pool.query(
-        `${FULL_SELECT} WHERE r.reference ILIKE $1 ORDER BY r.id ASC LIMIT $2 OFFSET $3`,
-        [pattern, limit, offset]
-      ),
-      pool.query(
-        "SELECT COUNT(*) FROM receipts WHERE reference ILIKE $1",
-        [pattern]
-      ),
+    const conditions = ["r.reference ILIKE $1"];
+    const params = [`%${search}%`];
+
+    if (contractor_id) { params.push(contractor_id); conditions.push(`r.contractor_id = $${params.length}`); }
+    if (authority_id) { params.push(authority_id); conditions.push(`r.authority_id = $${params.length}`); }
+    if (deal_id) { params.push(deal_id); conditions.push(`r.deal_id = $${params.length}`); }
+    if (branch_id) { params.push(branch_id); conditions.push(`r.branch_id = $${params.length}`); }
+
+    const hasFilters = Boolean(contractor_id || authority_id || deal_id || branch_id);
+    const whereClause = conditions.join(" AND ");
+    const limitClause = hasFilters ? "" : " LIMIT 10";
+
+    const { rows } = await pool.query(
+      `${FULL_SELECT} WHERE ${whereClause} ORDER BY r.created_at DESC${limitClause}`,
+      params
+    );
+    res.json({ data: rows, total: rows.length, filtered: hasFilters });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function getFilterOptions(req, res) {
+  try {
+    const [{ rows: contractors }, { rows: authorities }] = await Promise.all([
+      pool.query("SELECT id, designation, full_name FROM contractors ORDER BY full_name"),
+      pool.query("SELECT id, name FROM contracting_authorities ORDER BY name"),
     ]);
-    const total = parseInt(countRows[0].count);
-    res.json({
-      data,
-      pagination: { page: parseInt(page), total, totalPages: Math.ceil(total / limit), limit },
-    });
+    res.json({ contractors, authorities });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -186,14 +198,14 @@ async function update(req, res) {
 
 async function remove(req, res) {
   try {
-    if (await tableExists(pool, "receipt_items")) {
-      const { rows: itemRows } = await pool.query(
-        "SELECT COUNT(*) FROM receipt_items WHERE receipt_id = $1",
-        [req.params.id]
-      );
-      if (parseInt(itemRows[0].count) > 0) {
-        return res.status(400).json({ error: "لا يمكن حذف هذا الوصل لأنه يحتوي على مواد مسجلة" });
-      }
+    const { rows: itemRows } = await pool.query(
+      "SELECT COUNT(*) FROM receipt_items WHERE receipt_id = $1",
+      [req.params.id]
+    );
+    if (parseInt(itemRows[0].count) > 0) {
+      return res.status(400).json({
+        error: "لا يمكن حذف هذا الوصل لأنه يحتوي على مواد أولية، قم بحذف المواد أولاً",
+      });
     }
     const { rows } = await pool.query(
       "DELETE FROM receipts WHERE id=$1 RETURNING id, reference",
@@ -206,8 +218,266 @@ async function remove(req, res) {
   }
 }
 
+const RECEIPT_ITEMS_SELECT = `
+  SELECT
+    ri.id,
+    ri.receipt_id,
+    ri.material_id,
+    ri.deal_item_id,
+    rm.name_ar,
+    rm.name_lat,
+    rm.unit,
+    mc.name_ar AS category_name,
+    ri.quantity,
+    ri.unit_price,
+    ri.tva,
+    (ri.quantity * ri.unit_price) AS total_ht,
+    (ri.quantity * ri.unit_price * (1 + ri.tva/100)) AS total_ttc
+  FROM receipt_items ri
+  JOIN raw_materials rm ON ri.material_id = rm.id
+  JOIN deal_items di ON ri.deal_item_id = di.id
+  JOIN material_categories mc ON di.category_id = mc.id
+`;
+
+async function getReceiptItems(req, res) {
+  try {
+    const { rows } = await pool.query(
+      `${RECEIPT_ITEMS_SELECT} WHERE ri.receipt_id = $1 ORDER BY ri.id`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function getDealMaterialsForReceipt(req, res) {
+  try {
+    const { rows: receiptRows } = await pool.query(
+      "SELECT deal_id FROM receipts WHERE id = $1",
+      [req.params.id]
+    );
+    if (!receiptRows.length) return res.status(404).json({ error: "الوصل غير موجود" });
+    const dealId = receiptRows[0].deal_id;
+
+    const { rows } = await pool.query(
+      `SELECT
+        di.id AS deal_item_id,
+        di.material_id,
+        rm.name_ar,
+        rm.name_lat,
+        rm.unit,
+        mc.name_ar AS category_name,
+        di.unit_price,
+        di.tva,
+        di.min_quantity,
+        di.max_quantity,
+        COALESCE(dis.initial_max_qty, di.max_quantity) AS initial_max_qty,
+        COALESCE(dis.remaining_qty, di.max_quantity) AS remaining_qty,
+        (ri.id IS NOT NULL) AS already_in_receipt
+      FROM deal_items di
+      JOIN raw_materials rm ON di.material_id = rm.id
+      JOIN material_categories mc ON di.category_id = mc.id
+      LEFT JOIN deal_items_snapshot dis ON dis.deal_item_id = di.id
+      LEFT JOIN receipt_items ri ON ri.receipt_id = $1 AND ri.material_id = di.material_id
+      WHERE di.deal_id = $2
+        AND COALESCE(dis.remaining_qty, di.max_quantity) > 0
+      ORDER BY rm.name_ar`,
+      [req.params.id, dealId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function addReceiptItem(req, res) {
+  const { deal_item_id, material_id, quantity } = req.body;
+  if (!deal_item_id) return res.status(400).json({ error: "المادة الأولية مطلوبة" });
+  if (!material_id) return res.status(400).json({ error: "المادة الأولية مطلوبة" });
+  if (quantity === undefined || quantity === null || quantity === "" || Number(quantity) <= 0) {
+    return res.status(400).json({ error: "الكمية يجب أن تكون أكبر من 0" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: receiptRows } = await client.query(
+      "SELECT deal_id FROM receipts WHERE id = $1",
+      [req.params.id]
+    );
+    if (!receiptRows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "الوصل غير موجود" });
+    }
+    const dealId = receiptRows[0].deal_id;
+
+    const { rows: dealItemRows } = await client.query(
+      `SELECT di.id, di.unit_price, di.tva, di.max_quantity, rm.unit
+       FROM deal_items di
+       JOIN raw_materials rm ON rm.id = di.material_id
+       WHERE di.id = $1 AND di.deal_id = $2`,
+      [deal_item_id, dealId]
+    );
+    if (!dealItemRows.length) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "المادة الأولية غير موجودة في هذه الصفقة" });
+    }
+    const dealItem = dealItemRows[0];
+
+    const { rows: existingRows } = await client.query(
+      "SELECT id FROM receipt_items WHERE receipt_id = $1 AND material_id = $2",
+      [req.params.id, material_id]
+    );
+    if (existingRows.length) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "هذه المادة الأولية مضافة مسبقاً لهذا الوصل" });
+    }
+
+    await createDealSnapshot(client, dealId);
+
+    const { rows: snapshotRows } = await client.query(
+      "SELECT remaining_qty FROM deal_items_snapshot WHERE deal_item_id = $1",
+      [deal_item_id]
+    );
+    const remainingQty = snapshotRows.length
+      ? Number(snapshotRows[0].remaining_qty)
+      : Number(dealItem.max_quantity);
+
+    if (Number(quantity) > remainingQty) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: `الكمية المدخلة تتجاوز الكمية المتبقية المتاحة (${remainingQty} ${dealItem.unit})`,
+      });
+    }
+
+    const { rows: insertRows } = await client.query(
+      `INSERT INTO receipt_items (receipt_id, deal_item_id, material_id, quantity, unit_price, tva)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [req.params.id, deal_item_id, material_id, quantity, dealItem.unit_price, dealItem.tva]
+    );
+
+    await client.query(
+      "UPDATE deal_items_snapshot SET remaining_qty = remaining_qty - $1 WHERE deal_item_id = $2",
+      [quantity, deal_item_id]
+    );
+
+    await client.query("COMMIT");
+
+    const { rows: fullRows } = await pool.query(
+      `${RECEIPT_ITEMS_SELECT} WHERE ri.id = $1`,
+      [insertRows[0].id]
+    );
+    res.status(201).json(fullRows[0]);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    if (err.code === "23505") return res.status(400).json({ error: "هذه المادة الأولية مضافة مسبقاً لهذا الوصل" });
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+}
+
+async function updateReceiptItem(req, res) {
+  const { quantity } = req.body;
+  if (quantity === undefined || quantity === null || quantity === "" || Number(quantity) <= 0) {
+    return res.status(400).json({ error: "الكمية يجب أن تكون أكبر من 0" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: itemRows } = await client.query(
+      `SELECT ri.id, ri.quantity, ri.deal_item_id, rm.unit
+       FROM receipt_items ri
+       JOIN raw_materials rm ON rm.id = ri.material_id
+       WHERE ri.id = $1 AND ri.receipt_id = $2`,
+      [req.params.itemId, req.params.id]
+    );
+    if (!itemRows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "المادة غير موجودة في هذا الوصل" });
+    }
+    const item = itemRows[0];
+    const oldQuantity = Number(item.quantity);
+
+    const { rows: snapshotRows } = await client.query(
+      "SELECT remaining_qty FROM deal_items_snapshot WHERE deal_item_id = $1",
+      [item.deal_item_id]
+    );
+    const remainingQty = snapshotRows.length ? Number(snapshotRows[0].remaining_qty) : 0;
+    const available = remainingQty + oldQuantity;
+
+    if (Number(quantity) > available) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: `الكمية المدخلة تتجاوز الكمية المتبقية المتاحة (${available} ${item.unit})`,
+      });
+    }
+
+    await client.query(
+      "UPDATE receipt_items SET quantity = $1 WHERE id = $2",
+      [quantity, req.params.itemId]
+    );
+
+    const newRemaining = remainingQty + oldQuantity - Number(quantity);
+    await client.query(
+      "UPDATE deal_items_snapshot SET remaining_qty = $1 WHERE deal_item_id = $2",
+      [newRemaining, item.deal_item_id]
+    );
+
+    await client.query("COMMIT");
+
+    const { rows: fullRows } = await pool.query(
+      `${RECEIPT_ITEMS_SELECT} WHERE ri.id = $1`,
+      [req.params.itemId]
+    );
+    res.json(fullRows[0]);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+}
+
+async function removeReceiptItem(req, res) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: itemRows } = await client.query(
+      "SELECT id, quantity, deal_item_id FROM receipt_items WHERE id = $1 AND receipt_id = $2",
+      [req.params.itemId, req.params.id]
+    );
+    if (!itemRows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "المادة غير موجودة في هذا الوصل" });
+    }
+    const item = itemRows[0];
+
+    await client.query("DELETE FROM receipt_items WHERE id = $1", [item.id]);
+
+    await client.query(
+      "UPDATE deal_items_snapshot SET remaining_qty = remaining_qty + $1 WHERE deal_item_id = $2",
+      [item.quantity, item.deal_item_id]
+    );
+
+    await client.query("COMMIT");
+    res.json({ deleted: item.id });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   getAll,
+  getFilterOptions,
   getById,
   getDealsByContractorAndAuthority,
   getDealBranchesForReceipt,
@@ -215,4 +485,9 @@ module.exports = {
   create,
   update,
   remove,
+  getReceiptItems,
+  getDealMaterialsForReceipt,
+  addReceiptItem,
+  updateReceiptItem,
+  removeReceiptItem,
 };

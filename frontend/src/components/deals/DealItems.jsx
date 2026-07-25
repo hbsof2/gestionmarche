@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Plus, Trash2, Pencil, Check, X, Package, Search, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, Package, Search, ChevronDown, Lightbulb } from "lucide-react";
 import { getAll as getRawMaterials } from "@/services/rawMaterialsService";
 import { getAll as getMaterialCategories } from "@/services/materialCategoriesService";
 import {
@@ -10,6 +10,7 @@ import {
   removeDealItem,
 } from "@/services/dealsService";
 import DealItemsBrowseModal from "./DealItemsBrowseModal";
+import DealItemEditModal from "./DealItemEditModal";
 
 const COLOR = "#1E8449";
 
@@ -37,7 +38,7 @@ function formatTva(value) {
 function formatQuantity(value, unit) {
   const n = Number(value);
   if (Number.isNaN(n)) return "-";
-  return `${n.toLocaleString("en-US", { maximumFractionDigits: 3 })} ${unit || ""}`.trim();
+  return `${parseFloat(n).toFixed(2)} ${unit || ""}`.trim();
 }
 
 function SearchableSelect({ value, options, getLabel, placeholder, error, onChange, disabled }) {
@@ -154,8 +155,10 @@ export default function DealItems({ dealId, dealReference }) {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const [toast, setToast] = useState(null);
   const [showBrowseModal, setShowBrowseModal] = useState(false);
+  const [editModalItem, setEditModalItem] = useState(null);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -261,13 +264,15 @@ export default function DealItems({ dealId, dealReference }) {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       await removeDealItem(dealId, deleteTarget.id);
       showToast("تم حذف المادة بنجاح");
       setDeleteTarget(null);
       fetchItems();
     } catch (err) {
-      showToast(err.arabicMessage || "حدث خطأ أثناء الحذف", "error");
+      const message = err.arabicMessage || err?.response?.data?.error || "حدث خطأ أثناء الحذف";
+      setDeleteError(message);
     } finally {
       setDeleting(false);
     }
@@ -474,7 +479,12 @@ export default function DealItems({ dealId, dealReference }) {
                 {items.map((item) => {
                   const isEditing = editingId === item.id;
                   return (
-                    <tr key={item.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50/60 dark:hover:bg-slate-700 transition-colors">
+                    <tr
+                      key={item.id}
+                      onDoubleClick={() => !isEditing && setEditModalItem(item)}
+                      title="انقر مرتين للتعديل"
+                      className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50/60 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                    >
                       <td className="w-12 font-medium text-sm text-slate-800 dark:text-slate-100 px-3 py-3 text-right whitespace-nowrap overflow-hidden text-ellipsis font-mono">
                         {item.id}
                       </td>
@@ -584,7 +594,10 @@ export default function DealItems({ dealId, dealReference }) {
                                 <Pencil size={15} />
                               </button>
                               <button
-                                onClick={() => setDeleteTarget(item)}
+                                onClick={() => {
+                                  setDeleteError(null);
+                                  setDeleteTarget(item);
+                                }}
                                 className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                                 title="حذف"
                               >
@@ -601,6 +614,15 @@ export default function DealItems({ dealId, dealReference }) {
             </table>
           </div>
         )}
+
+        {!loading && items.length > 0 && (
+          <div className="flex items-center justify-end gap-2 mt-2 px-4 pb-4">
+            <span className="text-sm font-bold text-slate-600 dark:text-slate-300">
+              نصيحة: انقر مرتين على أي مادة لتعديلها
+            </span>
+            <Lightbulb size={16} className="text-yellow-500 shrink-0" />
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -615,6 +637,13 @@ export default function DealItems({ dealId, dealReference }) {
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">هل أنت متأكد من حذف المادة:</p>
               <p className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-2">&quot;{deleteTarget.name_ar}&quot;</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">لا يمكن التراجع عن هذا الإجراء</p>
+
+              {deleteError && (
+                <div className="mt-3 mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-red-700 dark:text-red-400 text-sm font-medium text-right">{deleteError}</p>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
                   onClick={handleDeleteConfirm}
@@ -624,7 +653,10 @@ export default function DealItems({ dealId, dealReference }) {
                   {deleting ? "جارٍ الحذف..." : "حذف"}
                 </button>
                 <button
-                  onClick={() => setDeleteTarget(null)}
+                  onClick={() => {
+                    setDeleteTarget(null);
+                    setDeleteError(null);
+                  }}
                   disabled={deleting}
                   className="flex-1 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
@@ -656,6 +688,20 @@ export default function DealItems({ dealId, dealReference }) {
           categories={categories}
           onClose={() => setShowBrowseModal(false)}
           onItemUpdated={() => fetchItems()}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editModalItem && (
+        <DealItemEditModal
+          item={editModalItem}
+          dealId={dealId}
+          onClose={() => setEditModalItem(null)}
+          onSuccess={() => {
+            setEditModalItem(null);
+            showToast("تم تحديث المادة بنجاح");
+            fetchItems();
+          }}
         />
       )}
     </div>

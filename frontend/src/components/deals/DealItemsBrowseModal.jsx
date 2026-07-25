@@ -18,7 +18,7 @@ function formatTva(value) {
 function formatQuantity(value, unit) {
   const n = Number(value);
   if (Number.isNaN(n)) return "-";
-  return `${n.toLocaleString("en-US", { maximumFractionDigits: 3 })} ${unit || ""}`.trim();
+  return `${parseFloat(n).toFixed(2)} ${unit || ""}`.trim();
 }
 
 function validateFields({ category_id, tva, min_quantity, max_quantity, unit_price }) {

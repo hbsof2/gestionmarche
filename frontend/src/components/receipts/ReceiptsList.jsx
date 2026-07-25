@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { Search, Eye, Edit, Trash2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Search, Eye, Edit, Trash2, Lightbulb } from "lucide-react";
 
 const COLOR = "#2471A3";
 
@@ -13,10 +13,9 @@ function formatDate(isoDate) {
 export default function ReceiptsList({
   receipts,
   loading,
-  pagination,
   search,
   onSearch,
-  onPageChange,
+  isFiltered,
   onView,
   onEdit,
   onDelete,
@@ -61,10 +60,12 @@ export default function ReceiptsList({
           <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center mb-4">
             <Search size={22} className="text-slate-300 dark:text-slate-600" />
           </div>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">لا توجد وصولات</p>
-          <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
-            {search ? "لا توجد نتائج لهذا البحث" : "ابدأ بإنشاء وصل جديد"}
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+            {isFiltered ? "لا توجد وصولات تطابق معايير الفلترة المحددة" : "لا توجد وصولات بعد، قم بإنشاء وصل جديد"}
           </p>
+          {search && (
+            <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">لا توجد نتائج لهذا البحث</p>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto w-full">
@@ -128,50 +129,21 @@ export default function ReceiptsList({
 
       {/* Keyboard navigation hint */}
       {!loading && receipts.length > 0 && (
-        <p className="px-4 text-xs text-slate-400 dark:text-slate-500 text-right mt-2">
-          نصيحة: انقر مرتين على الوصل للدخول إليه
-        </p>
+        <div className="flex items-center justify-end gap-2 mt-2 px-4">
+          <span className="text-sm font-bold text-slate-600 dark:text-slate-300">
+            نصيحة: انقر مرتين على الوصل للدخول إليه
+          </span>
+          <Lightbulb size={16} className="text-yellow-500 shrink-0" />
+        </div>
       )}
 
-      {/* Pagination — in RTL: prev (higher page) on LEFT, next (lower) on RIGHT */}
-      {!loading && pagination.totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-xs text-slate-500 dark:text-slate-400 order-2 sm:order-1">
-            {pagination.total} وصل — صفحة {pagination.page} من {pagination.totalPages}
+      {/* Default (unfiltered) view note */}
+      {!loading && !isFiltered && receipts.length > 0 && (
+        <div className="flex items-center justify-end gap-2 mt-2 px-4 pb-4">
+          <span className="text-sm font-bold text-slate-600 dark:text-slate-300">
+            يتم عرض آخر 10 وصولات فقط، استخدم الفلترة لعرض وصولات محددة
           </span>
-          <div className="flex items-center gap-1 order-1 sm:order-2">
-            <button
-              onClick={() => onPageChange(pagination.page - 1)}
-              disabled={pagination.page <= 1}
-              className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
-            {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
-              const start = Math.max(1, Math.min(pagination.page - 2, pagination.totalPages - 4));
-              return start + i;
-            }).map((p) => (
-              <button
-                key={p}
-                onClick={() => onPageChange(p)}
-                className={`w-7 h-7 text-xs rounded-lg font-medium transition-colors ${
-                  p === pagination.page
-                    ? "text-white"
-                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                }`}
-                style={p === pagination.page ? { backgroundColor: COLOR } : {}}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              onClick={() => onPageChange(pagination.page + 1)}
-              disabled={pagination.page >= pagination.totalPages}
-              className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-          </div>
+          <Lightbulb size={16} className="text-yellow-500 shrink-0" />
         </div>
       )}
     </div>

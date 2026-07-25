@@ -207,10 +207,14 @@ function validateDealItem(body) {
 async function getDealItems(req, res) {
   try {
     const { rows } = await pool.query(
-      `SELECT di.*, rm.name_ar, rm.name_lat, rm.unit, mc.name_ar AS category_name
+      `SELECT di.*, rm.name_ar, rm.name_lat, rm.unit, mc.name_ar AS category_name,
+              COALESCE(dis.initial_max_qty, di.max_quantity) AS initial_max_qty,
+              COALESCE(dis.initial_min_qty, di.min_quantity) AS initial_min_qty,
+              COALESCE(dis.remaining_qty, di.max_quantity) AS remaining_qty
        FROM deal_items di
        JOIN raw_materials rm ON rm.id = di.material_id
        JOIN material_categories mc ON mc.id = di.category_id
+       LEFT JOIN deal_items_snapshot dis ON dis.deal_item_id = di.id
        WHERE di.deal_id = $1
        ORDER BY di.id ASC`,
       [req.params.id]
@@ -258,6 +262,16 @@ async function updateDealItem(req, res) {
 
 async function removeDealItem(req, res) {
   try {
+    const { rows: receiptItemRows } = await pool.query(
+      "SELECT COUNT(*) FROM receipt_items WHERE deal_item_id=$1",
+      [req.params.itemId]
+    );
+    if (Number(receiptItemRows[0].count) > 0) {
+      return res.status(400).json({
+        error: "لا يمكن حذف هذه المادة الأولية لأنها مستخدمة في وصل تسليم أو أكثر",
+      });
+    }
+
     const { rows } = await pool.query(
       "DELETE FROM deal_items WHERE id=$1 AND deal_id=$2 RETURNING id",
       [req.params.itemId, req.params.id]

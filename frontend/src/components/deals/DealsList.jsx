@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { Search, Eye, Edit, Trash2, BarChart3, ChevronRight, ChevronLeft } from "lucide-react";
+import { Search, Eye, Edit, Trash2, BarChart3, ChevronRight, ChevronLeft, Lightbulb } from "lucide-react";
 
 const COLOR = "#1E8449";
 
@@ -159,9 +159,12 @@ export default function DealsList({
 
       {/* Keyboard navigation hint */}
       {!loading && deals.length > 0 && (
-        <p className="px-4 text-xs text-slate-400 dark:text-slate-500 text-right mt-2">
-          نصيحة: انقر مرتين على الصفقة أو اضغط Enter أو Ctrl+F1 للدخول إليها
-        </p>
+        <div className="flex items-center justify-end gap-2 mt-2 px-4">
+          <span className="text-sm font-bold text-slate-600 dark:text-slate-300">
+            نصيحة: انقر مرتين على الصفقة أو اضغط Enter أو Ctrl+F1 للدخول إليها
+          </span>
+          <Lightbulb size={16} className="text-yellow-500 shrink-0" />
+        </div>
       )}
 
       {/* Pagination — in RTL: prev (higher page) on LEFT, next (lower) on RIGHT */}

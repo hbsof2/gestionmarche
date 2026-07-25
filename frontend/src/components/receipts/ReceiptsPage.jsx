@@ -1,67 +1,25 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, FileText, X } from "lucide-react";
+import { Plus, FileText, Filter } from "lucide-react";
 import ReceiptsList from "./ReceiptsList";
+import ReceiptsFilter from "./ReceiptsFilter";
 import ReceiptForm from "./ReceiptForm";
 import ReceiptDeleteModal from "./ReceiptDeleteModal";
+import ReceiptDetail from "./ReceiptDetail";
 import { getAll, create, update, remove } from "@/services/receiptsService";
 
 const COLOR = "#2471A3";
 
-function formatDate(isoDate) {
-  if (!isoDate) return "-";
-  const [year, month, day] = isoDate.slice(0, 10).split("-");
-  return `${day}/${month}/${year}`;
-}
-
-function ReceiptViewModal({ receipt, onClose }) {
-  return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">{receipt.reference}</h3>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="p-5 space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-400 dark:text-slate-500">الصفقة</span>
-            <span className="font-medium text-slate-800 dark:text-slate-100">{receipt.deal_reference}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-400 dark:text-slate-500">المتعامل المتعاقد</span>
-            <span className="font-medium text-slate-800 dark:text-slate-100">{receipt.contractor_name}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-400 dark:text-slate-500">المصلحة المتعاقدة</span>
-            <span className="font-medium text-slate-800 dark:text-slate-100">{receipt.authority_name}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-400 dark:text-slate-500">الفرع</span>
-            <span className="font-medium text-slate-800 dark:text-slate-100">{receipt.branch_name}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-400 dark:text-slate-500">تاريخ الوصل</span>
-            <span className="font-medium text-slate-800 dark:text-slate-100">{formatDate(receipt.receipt_date)}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function ReceiptsPage({ activeService, onServiceChange }) {
   const [receipts, setReceipts] = useState([]);
-  const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0, limit: 10 });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [showFilter, setShowFilter] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({});
+  const [isFiltered, setIsFiltered] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editReceipt, setEditReceipt] = useState(null);
-  const [viewReceipt, setViewReceipt] = useState(null);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -70,12 +28,12 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const fetchReceipts = async (page = 1, q = search) => {
+  const fetchReceipts = async (filters = activeFilters, q = search) => {
     setLoading(true);
     try {
-      const result = await getAll(page, q);
+      const result = await getAll({ search: q, ...filters });
       setReceipts(result.data);
-      setPagination(result.pagination);
+      setIsFiltered(result.filtered);
     } catch {
       showToast("حدث خطأ أثناء تحميل البيانات", "error");
     } finally {
@@ -83,7 +41,7 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
     }
   };
 
-  useEffect(() => { fetchReceipts(1, ""); }, []);
+  useEffect(() => { fetchReceipts({}, ""); }, []);
 
   useEffect(() => {
     if (activeService === "add") {
@@ -94,10 +52,18 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
 
   const handleSearch = (q) => {
     setSearch(q);
-    fetchReceipts(1, q);
+    fetchReceipts(activeFilters, q);
   };
 
-  const handlePageChange = (page) => fetchReceipts(page, search);
+  const handleFilterApply = (filters) => {
+    setActiveFilters(filters);
+    fetchReceipts(filters, search);
+  };
+
+  const handleFilterClear = () => {
+    setActiveFilters({});
+    fetchReceipts({}, search);
+  };
 
   const handleEdit = (receipt) => {
     setEditReceipt(receipt);
@@ -106,7 +72,7 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
 
   const handleDeleteClick = (receipt) => setDeleteTarget(receipt);
 
-  const handleView = (receipt) => setViewReceipt(receipt);
+  const handleView = (receipt) => setSelectedReceipt(receipt);
 
   const handleFormSave = async (data, id) => {
     try {
@@ -120,7 +86,7 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
       setFormOpen(false);
       setEditReceipt(null);
       onServiceChange?.("list");
-      fetchReceipts(pagination.page, search);
+      fetchReceipts();
     } catch (err) {
       throw err;
     }
@@ -137,11 +103,27 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
     await remove(deleteTarget.id);
     showToast("تم حذف الوصل بنجاح");
     setDeleteTarget(null);
-    const newPage = receipts.length === 1 && pagination.page > 1
-      ? pagination.page - 1
-      : pagination.page;
-    fetchReceipts(newPage, search);
+    fetchReceipts();
   };
+
+  if (selectedReceipt) {
+    return (
+      <div className="space-y-4">
+        <ReceiptDetail receipt={selectedReceipt} onBack={() => setSelectedReceipt(null)} />
+
+        {/* Toast */}
+        {toast && (
+          <div
+            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all duration-300 whitespace-nowrap ${
+              toast.type === "error" ? "bg-red-500" : "bg-green-600"
+            }`}
+          >
+            {toast.message}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -158,11 +140,25 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
           <div>
             <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-tight">الوصولات</h2>
             <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">
-              {(pagination?.total ?? 0) > 0 ? `${pagination.total} وصل مسجل` : "إدارة الوصولات"}
+              {receipts.length > 0 ? `${receipts.length} وصل معروض` : "إدارة الوصولات"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowFilter((prev) => !prev)}
+            className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors shrink-0 ${
+              isFiltered
+                ? "border-blue-300 text-blue-600 dark:border-blue-500/40 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10"
+                : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            }`}
+          >
+            <Filter size={16} />
+            فلترة
+            {isFiltered && (
+              <span className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-blue-500" />
+            )}
+          </button>
           <button
             onClick={() => { setEditReceipt(null); setFormOpen(true); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium shadow-sm hover:opacity-90 transition-opacity shrink-0"
@@ -174,14 +170,23 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
         </div>
       </div>
 
+      {/* Filter Panel */}
+      {showFilter && (
+        <ReceiptsFilter
+          isFiltered={isFiltered}
+          resultCount={receipts.length}
+          onFilter={handleFilterApply}
+          onClearFilter={handleFilterClear}
+        />
+      )}
+
       {/* List */}
       <ReceiptsList
         receipts={receipts}
         loading={loading}
-        pagination={pagination}
         search={search}
         onSearch={handleSearch}
-        onPageChange={handlePageChange}
+        isFiltered={isFiltered}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
@@ -195,11 +200,6 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
           onSave={handleFormSave}
           onCancel={handleFormCancel}
         />
-      )}
-
-      {/* View Modal */}
-      {viewReceipt && (
-        <ReceiptViewModal receipt={viewReceipt} onClose={() => setViewReceipt(null)} />
       )}
 
       {/* Delete Modal */}
