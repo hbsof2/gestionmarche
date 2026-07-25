@@ -27,6 +27,7 @@ import {
   Trash2,
   Download,
   Mail,
+  Phone,
   Settings,
   BarChart3,
   Menu,
@@ -504,6 +505,38 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          <footer className="mt-auto pt-8 pb-4 px-4 border-t
+                             border-slate-200 dark:border-slate-700">
+            <div className="flex flex-col sm:flex-row items-center
+                            justify-center gap-2 sm:gap-6 text-center">
+
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                © كل الحقوق محفوظة HBSOFT 2026
+              </span>
+
+              <span className="hidden sm:block text-slate-300 dark:text-slate-600">|</span>
+
+              <a href="tel:0671829787"
+                 className="flex items-center gap-1.5 text-xs text-slate-400
+                            dark:text-slate-500 hover:text-slate-600
+                            dark:hover:text-slate-300 transition-colors font-medium">
+                <Phone size={13} />
+                06-71-82-97-87
+              </a>
+
+              <span className="hidden sm:block text-slate-300 dark:text-slate-600">|</span>
+
+              <a href="mailto:hbouamama7@gmail.com"
+                 className="flex items-center gap-1.5 text-xs text-slate-400
+                            dark:text-slate-500 hover:text-slate-600
+                            dark:hover:text-slate-300 transition-colors font-medium">
+                <Mail size={13} />
+                hbouamama7@gmail.com
+              </a>
+
+            </div>
+          </footer>
         </main>
       </div>
 
