@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { Search, Eye, Edit, Trash2, Lightbulb } from "lucide-react";
+import { Search, Eye, Edit, Trash2, Lightbulb, Lock } from "lucide-react";
+import { getUser } from "@/lib/auth";
 
 const COLOR = "#2471A3";
 
@@ -22,6 +23,7 @@ export default function ReceiptsList({
   activeService,
 }) {
   const searchRef = useRef(null);
+  const currentUser = getUser();
 
   useEffect(() => {
     if (activeService === "search") {
@@ -82,7 +84,9 @@ export default function ReceiptsList({
               </tr>
             </thead>
             <tbody>
-              {receipts.map((r) => (
+              {receipts.map((r) => {
+                const isOwner = r.created_by === currentUser?.id || currentUser?.role === "admin";
+                return (
                 <tr
                   key={r.id}
                   onDoubleClick={() => onView(r)}
@@ -104,24 +108,33 @@ export default function ReceiptsList({
                       >
                         <Eye size={15} />
                       </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onEdit(r); }}
-                        className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
-                        title="تعديل"
-                      >
-                        <Edit size={15} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onDelete(r); }}
-                        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                        title="حذف"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {isOwner ? (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onEdit(r); }}
+                            className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                            title="تعديل"
+                          >
+                            <Edit size={15} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDelete(r); }}
+                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </>
+                      ) : (
+                        <span className="p-1.5">
+                          <Lock size={15} className="text-slate-300 dark:text-slate-600" title="أنشئ بواسطة مستخدم آخر" />
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

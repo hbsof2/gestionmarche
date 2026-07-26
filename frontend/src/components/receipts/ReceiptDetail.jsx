@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ArrowRight, Plus, Trash2, Pencil, Check, X, FileText, Search, ChevronDown, Package, Lightbulb } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Pencil, Check, X, FileText, Search, ChevronDown, Package, Lightbulb, Lock } from "lucide-react";
 import {
   getReceiptItems,
   getAvailableMaterials,
@@ -8,6 +8,7 @@ import {
   updateReceiptItem,
   removeReceiptItem,
 } from "@/services/receiptsService";
+import { getUser } from "@/lib/auth";
 import ReceiptItemDeleteModal from "./ReceiptItemDeleteModal";
 import ReceiptItemEditModal from "./ReceiptItemEditModal";
 
@@ -128,6 +129,8 @@ function MaterialSearchableSelect({ value, options, onChange, error }) {
 }
 
 export default function ReceiptDetail({ receipt, onBack }) {
+  const currentUser = getUser();
+  const isOwner = receipt.created_by === currentUser?.id || currentUser?.role === "admin";
   const [availableMaterials, setAvailableMaterials] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -298,6 +301,16 @@ export default function ReceiptDetail({ receipt, onBack }) {
         <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">{receipt.reference}</h2>
       </div>
 
+      {/* Ownership notice */}
+      {!isOwner && (
+        <div className="flex items-center gap-2 p-3 mb-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <Lock size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-sm font-bold text-amber-700 dark:text-amber-400 text-right">
+            هذا الوصل أنشئ بواسطة مستخدم آخر، يمكنك الاطلاع عليه فقط
+          </p>
+        </div>
+      )}
+
       {/* Info Card */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 sm:p-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -333,6 +346,7 @@ export default function ReceiptDetail({ receipt, onBack }) {
       </div>
 
       {/* Add Material Form */}
+      {isOwner && (
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 sm:p-5">
         <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4">إضافة مادة أولية للوصل</h4>
         <form onSubmit={handleAdd} className="space-y-4">
@@ -426,6 +440,7 @@ export default function ReceiptDetail({ receipt, onBack }) {
           </div>
         </form>
       </div>
+      )}
 
       {/* Materials Table */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -472,7 +487,7 @@ export default function ReceiptDetail({ receipt, onBack }) {
                   return (
                     <tr
                       key={item.id}
-                      onDoubleClick={() => !isEditing && setEditModalItem(item)}
+                      onDoubleClick={() => !isEditing && isOwner && setEditModalItem(item)}
                       title="انقر مرتين للتعديل"
                       className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50/60 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                     >
@@ -552,20 +567,28 @@ export default function ReceiptDetail({ receipt, onBack }) {
                           </td>
                           <td className="font-medium text-sm px-3 py-3 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => startEdit(item)}
-                                className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
-                                title="تعديل"
-                              >
-                                <Pencil size={15} />
-                              </button>
-                              <button
-                                onClick={() => setDeleteTarget(item)}
-                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                                title="حذف"
-                              >
-                                <Trash2 size={15} />
-                              </button>
+                              {isOwner ? (
+                                <>
+                                  <button
+                                    onClick={() => startEdit(item)}
+                                    className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                                    title="تعديل"
+                                  >
+                                    <Pencil size={15} />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteTarget(item)}
+                                    className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                    title="حذف"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="p-1.5">
+                                  <Lock size={15} className="text-slate-300 dark:text-slate-600" title="أنشئ بواسطة مستخدم آخر" />
+                                </span>
+                              )}
                             </div>
                           </td>
                         </>

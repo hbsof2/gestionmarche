@@ -175,11 +175,29 @@ async function create(req, res) {
   }
 }
 
+async function checkReceiptOwnership(receiptId, req, res, message) {
+  const { rows } = await pool.query("SELECT created_by FROM receipts WHERE id = $1", [receiptId]);
+  if (!rows.length) {
+    res.status(404).json({ error: "الوصل غير موجود" });
+    return false;
+  }
+  if (rows[0].created_by !== req.user.id && req.user.role !== "admin") {
+    res.status(403).json({ error: message });
+    return false;
+  }
+  return true;
+}
+
 async function update(req, res) {
   const { receipt_date, branch_id } = req.body;
   if (!receipt_date) return res.status(400).json({ error: "تاريخ الوصل مطلوب" });
   if (!branch_id) return res.status(400).json({ error: "فرع المصلحة مطلوب" });
   try {
+    if (!(await checkReceiptOwnership(
+      req.params.id, req, res,
+      "لا يمكنك تعديل هذا الوصل لأنه أنشئ بواسطة مستخدم آخر"
+    ))) return;
+
     const { rows } = await pool.query(
       "UPDATE receipts SET receipt_date=$1, branch_id=$2 WHERE id=$3 RETURNING id",
       [receipt_date, branch_id, req.params.id]
@@ -198,6 +216,11 @@ async function update(req, res) {
 
 async function remove(req, res) {
   try {
+    if (!(await checkReceiptOwnership(
+      req.params.id, req, res,
+      "لا يمكنك حذف هذا الوصل لأنه أنشئ بواسطة مستخدم آخر"
+    ))) return;
+
     const { rows: itemRows } = await pool.query(
       "SELECT COUNT(*) FROM receipt_items WHERE receipt_id = $1",
       [req.params.id]
@@ -304,12 +327,18 @@ async function addReceiptItem(req, res) {
     await client.query("BEGIN");
 
     const { rows: receiptRows } = await client.query(
-      "SELECT deal_id FROM receipts WHERE id = $1",
+      "SELECT deal_id, created_by FROM receipts WHERE id = $1",
       [req.params.id]
     );
     if (!receiptRows.length) {
       await client.query("ROLLBACK");
       return res.status(404).json({ error: "الوصل غير موجود" });
+    }
+    if (receiptRows[0].created_by !== req.user.id && req.user.role !== "admin") {
+      await client.query("ROLLBACK");
+      return res.status(403).json({
+        error: "لا يمكنك التعديل على هذا الوصل لأنه أنشئ بواسطة مستخدم آخر",
+      });
     }
     const dealId = receiptRows[0].deal_id;
 
@@ -389,6 +418,21 @@ async function updateReceiptItem(req, res) {
   try {
     await client.query("BEGIN");
 
+    const { rows: receiptRows } = await client.query(
+      "SELECT created_by FROM receipts WHERE id = $1",
+      [req.params.id]
+    );
+    if (!receiptRows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "الوصل غير موجود" });
+    }
+    if (receiptRows[0].created_by !== req.user.id && req.user.role !== "admin") {
+      await client.query("ROLLBACK");
+      return res.status(403).json({
+        error: "لا يمكنك التعديل على هذا الوصل لأنه أنشئ بواسطة مستخدم آخر",
+      });
+    }
+
     const { rows: itemRows } = await client.query(
       `SELECT ri.id, ri.quantity, ri.deal_item_id, rm.unit
        FROM receipt_items ri
@@ -447,6 +491,21 @@ async function removeReceiptItem(req, res) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    const { rows: receiptRows } = await client.query(
+      "SELECT created_by FROM receipts WHERE id = $1",
+      [req.params.id]
+    );
+    if (!receiptRows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "الوصل غير موجود" });
+    }
+    if (receiptRows[0].created_by !== req.user.id && req.user.role !== "admin") {
+      await client.query("ROLLBACK");
+      return res.status(403).json({
+        error: "لا يمكنك التعديل على هذا الوصل لأنه أنشئ بواسطة مستخدم آخر",
+      });
+    }
 
     const { rows: itemRows } = await client.query(
       "SELECT id, quantity, deal_item_id FROM receipt_items WHERE id = $1 AND receipt_id = $2",
