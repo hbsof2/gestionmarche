@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ArrowRight, Plus, Trash2, Pencil, Check, X, FileText, Search, ChevronDown, Package, Lightbulb, Lock } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Pencil, Check, X, FileText, Search, ChevronDown, Package, Lightbulb, Lock, Download, Printer } from "lucide-react";
 import {
   getReceiptItems,
   getAvailableMaterials,
@@ -11,6 +11,8 @@ import {
 import { getUser } from "@/lib/auth";
 import ReceiptItemDeleteModal from "./ReceiptItemDeleteModal";
 import ReceiptItemEditModal from "./ReceiptItemEditModal";
+import exportReceiptToExcel from "@/lib/exportReceiptExcel";
+import printReceiptPDF from "@/lib/printReceiptPDF";
 
 const COLOR = "#2471A3";
 
@@ -145,10 +147,32 @@ export default function ReceiptDetail({ receipt, onBack }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editModalItem, setEditModalItem] = useState(null);
   const [toast, setToast] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportLanguage, setExportLanguage] = useState("AR");
 
-  const showToast = (message, type = "success") => {
+  const showToast = (message, type = "success", duration = 3500) => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), duration);
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      await exportReceiptToExcel(receipt, items, exportLanguage);
+      showToast(
+        "تم تحميل الملف بنجاح، افتح الملف ثم اضغط Ctrl+P للطباعة",
+        "success",
+        5000
+      );
+    } catch {
+      showToast("حدث خطأ أثناء تحميل الملف", "error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handlePrint = () => {
+    printReceiptPDF(receipt, items, "AR");
   };
 
   const fetchItems = async () => {
@@ -291,14 +315,56 @@ export default function ReceiptDetail({ receipt, onBack }) {
       </button>
 
       {/* Header */}
-      <div className="flex items-center gap-2.5">
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-          style={{ backgroundColor: COLOR + "18" }}
-        >
-          <FileText size={18} style={{ color: COLOR }} />
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: COLOR + "18" }}
+          >
+            <FileText size={18} style={{ color: COLOR }} />
+          </div>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">{receipt.reference}</h2>
         </div>
-        <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 leading-tight">{receipt.reference}</h2>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          {/* Language dropdown */}
+          <select
+            value={exportLanguage}
+            onChange={(e) => setExportLanguage(e.target.value)}
+            className="px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer w-full sm:w-auto"
+          >
+            <option value="AR">عربي AR</option>
+            <option value="FR">فرنسي FR</option>
+          </select>
+
+          <button
+            onClick={handleExportExcel}
+            disabled={items.length === 0 || isExporting}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm dark:bg-emerald-700 dark:hover:bg-emerald-600 w-full sm:w-auto justify-center"
+          >
+            {isExporting ? (
+              <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            ) : (
+              <Download size={16} />
+            )}
+            تحميل Excel
+          </button>
+
+          {/* PRINT BUTTON - disabled for now
+          <button
+            onClick={handlePrint}
+            disabled={items.length === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg
+                       text-sm font-medium text-white bg-blue-600
+                       hover:bg-blue-700 disabled:opacity-50
+                       disabled:cursor-not-allowed transition-colors shadow-sm
+                       dark:bg-blue-700 dark:hover:bg-blue-600"
+          >
+            <Printer size={16} />
+            طباعة
+          </button>
+          */}
+        </div>
       </div>
 
       {/* Ownership notice */}

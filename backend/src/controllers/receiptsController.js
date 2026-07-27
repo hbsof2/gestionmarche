@@ -4,6 +4,7 @@ const createDealSnapshot = require("../utils/dealSnapshot");
 const FULL_SELECT = `
   SELECT r.*, d.reference AS deal_reference,
          c.full_name AS contractor_name,
+         c.phone_mobile AS contractor_phone,
          a.name AS authority_name,
          b.name AS branch_name,
          b.wilaya AS branch_wilaya,
