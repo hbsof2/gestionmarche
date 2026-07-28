@@ -36,11 +36,19 @@ async function exportReceiptToExcel(receipt, items, language = "AR") {
       worksheet.getCell(cellAddress).value = value;
     };
 
-    replaceCell("A1", receipt.created_by_name || "");
-    replaceCell("E1", receipt.reference || "");
-    replaceCell("A4", receipt.contractor_phone || "");
-    replaceCell("E3", `يسلّم إلى : ${receipt.branch_name || ""}`);
-    replaceCell("G8", formatDate(receipt.receipt_date));
+    if (language === "AR") {
+      replaceCell("A1", receipt.created_by_name || "");
+      replaceCell("E1", receipt.reference || "");
+      replaceCell("A4", receipt.contractor_phone || "");
+      replaceCell("E3", `يسلّم إلى : ${receipt.branch_name || ""}`);
+      replaceCell("G8", formatDate(receipt.receipt_date));
+    } else {
+      replaceCell("I1", receipt.created_by_name || "");
+      replaceCell("E1", receipt.reference || "");
+      replaceCell("A4", receipt.contractor_phone || "");
+      replaceCell("E3", `Livré à : ${receipt.branch_name || ""}`);
+      replaceCell("G8", formatDate(receipt.receipt_date));
+    }
 
     const startRow = 12;
 
@@ -60,7 +68,8 @@ async function exportReceiptToExcel(receipt, items, language = "AR") {
 
       worksheet.getCell(`A${rowNumber}`).value = index + 1;
       worksheet.getCell(`B${rowNumber}`).value = parseFloat(item.quantity).toFixed(2);
-      worksheet.getCell(`C${rowNumber}`).value = item.name_ar || "";
+      worksheet.getCell(`C${rowNumber}`).value =
+        language === "AR" ? item.name_ar || "" : item.name_lat || item.name_ar || "";
       worksheet.getCell(`G${rowNumber}`).value = parseFloat(item.unit_price).toFixed(2);
       worksheet.getCell(`I${rowNumber}`).value = parseFloat(item.quantity * item.unit_price).toFixed(2);
 
@@ -169,20 +178,22 @@ async function exportReceiptToExcel(receipt, items, language = "AR") {
       }
     })();
 
-    // Unmerge any existing merge in that area before merging, to avoid conflicts
+    const thankYouMessage =
+      language === "AR" ? "شكــــــــــرا على ثقــــــــــتكم" : "Merci de votre confiance.";
+
+    // Unmerge existing merges in that area first
     try {
       worksheet.unMergeCells(`A${totalHtRow}:F${totalTtcRow}`);
     } catch (e) {
-      // ignore if not merged
+      // ignore
     }
 
-    // Merge cells A to F for both totalht and totalttc rows
-    // to create one merged cell for the thank you message
+    // Merge cells A to F for both rows
     worksheet.mergeCells(`A${totalHtRow}:F${totalTtcRow}`);
 
-    // Set thank you message in the merged cell
+    // Set thank you message
     const thankYouCell = worksheet.getCell(`A${totalHtRow}`);
-    thankYouCell.value = "شكــــــــــرا على ثقــــــــــتكم";
+    thankYouCell.value = thankYouMessage;
     thankYouCell.alignment = {
       horizontal: "center",
       vertical: "middle",
@@ -197,7 +208,10 @@ async function exportReceiptToExcel(receipt, items, language = "AR") {
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
       today.getDate()
     ).padStart(2, "0")}`;
-    const filename = `وصل_${receipt.reference}_${dateStr}.xlsx`;
+    const filename =
+      language === "AR"
+        ? `وصل_${receipt.reference}_${dateStr}.xlsx`
+        : `Livraison_${receipt.reference}_${dateStr}.xlsx`;
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
