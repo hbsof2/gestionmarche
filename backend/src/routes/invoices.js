@@ -4,6 +4,7 @@ const {
   getFilterOptions,
   getById,
   getDealsByContractorAndAuthority,
+  getDealCategories,
   getCumulativeItemsForInvoice,
   create,
   remove,
@@ -14,6 +15,7 @@ const canManage = requirePermission("can_manage_invoices");
 
 router.get("/filter-options", verifyToken, getFilterOptions);
 router.get("/deals", verifyToken, getDealsByContractorAndAuthority);
+router.get("/deal-categories/:dealId", verifyToken, getDealCategories);
 router.get("/cumulative-items", verifyToken, getCumulativeItemsForInvoice);
 
 router.get("/", verifyToken, getAll);

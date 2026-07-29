@@ -28,10 +28,15 @@ export async function getDealsByContractorAndAuthority(contractorId, authorityId
   return data;
 }
 
-export async function getCumulativeItems(dealId, startDate, endDate) {
-  const { data } = await api.get("/api/invoices/cumulative-items", {
-    params: { deal_id: dealId, start_date: startDate, end_date: endDate },
-  });
+export async function getCumulativeItems(dealId, startDate, endDate, categoryIds = []) {
+  const params = { deal_id: dealId, start_date: startDate, end_date: endDate };
+  if (categoryIds.length > 0) params.category_ids = categoryIds.join(",");
+  const { data } = await api.get("/api/invoices/cumulative-items", { params });
+  return data;
+}
+
+export async function getDealCategories(dealId) {
+  const { data } = await api.get(`/api/invoices/deal-categories/${dealId}`);
   return data;
 }
 

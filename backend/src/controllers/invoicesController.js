@@ -95,7 +95,14 @@ async function getDealsByContractorAndAuthority(req, res) {
   }
 }
 
-async function fetchCumulativeItems(queryable, dealId, startDate, endDate) {
+async function fetchCumulativeItems(queryable, dealId, startDate, endDate, categoryIds = null) {
+  const params = [dealId, startDate, endDate];
+  let categoryFilter = "";
+  if (categoryIds && categoryIds.length) {
+    params.push(categoryIds);
+    categoryFilter = `AND mc.id = ANY($${params.length}::int[])`;
+  }
+
   const { rows } = await queryable.query(
     `SELECT
       rm.id AS material_id,
@@ -103,6 +110,7 @@ async function fetchCumulativeItems(queryable, dealId, startDate, endDate) {
       rm.name_lat,
       rm.unit,
       mc.name_ar AS category_name,
+      mc.id AS category_id,
       SUM(ri.quantity) AS total_quantity,
       ri.unit_price,
       ri.tva,
@@ -116,18 +124,43 @@ async function fetchCumulativeItems(queryable, dealId, startDate, endDate) {
      WHERE r.deal_id = $1
        AND r.receipt_date >= $2
        AND r.receipt_date <= $3
-     GROUP BY rm.id, rm.name_ar, rm.name_lat, rm.unit, mc.name_ar, ri.unit_price, ri.tva
-     ORDER BY rm.name_ar`,
-    [dealId, startDate, endDate]
+       ${categoryFilter}
+     GROUP BY rm.id, rm.name_ar, rm.name_lat, rm.unit, mc.name_ar, mc.id, ri.unit_price, ri.tva
+     ORDER BY mc.name_ar, rm.name_ar`,
+    params
   );
   return rows;
 }
 
+function parseCategoryIds(raw) {
+  if (!raw) return null;
+  const list = Array.isArray(raw) ? raw : String(raw).split(",");
+  const ids = list.map((id) => parseInt(id, 10)).filter((id) => !Number.isNaN(id));
+  return ids.length ? ids : null;
+}
+
+async function getDealCategories(req, res) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT mc.id, mc.name_ar, mc.name_lat
+       FROM deal_items di
+       JOIN material_categories mc ON di.category_id = mc.id
+       WHERE di.deal_id = $1
+       ORDER BY mc.name_ar`,
+      [req.params.dealId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 async function getCumulativeItemsForInvoice(req, res) {
-  const { deal_id, start_date, end_date } = req.query;
+  const { deal_id, start_date, end_date, category_ids } = req.query;
   if (!deal_id || !start_date || !end_date) {
     return res.status(400).json({ error: "يرجى تحديد الصفقة وتاريخ البداية وتاريخ النهاية" });
   }
+  const categoryIds = parseCategoryIds(category_ids);
   try {
     const { rows: dealRows } = await pool.query(
       "SELECT reference, start_date, end_date FROM deals WHERE id = $1",
@@ -144,7 +177,7 @@ async function getCumulativeItemsForInvoice(req, res) {
         `SELECT ca.* FROM contracting_authorities ca JOIN deals d ON d.authority_id = ca.id WHERE d.id = $1`,
         [deal_id]
       ),
-      fetchCumulativeItems(pool, deal_id, start_date, end_date),
+      fetchCumulativeItems(pool, deal_id, start_date, end_date, categoryIds),
     ]);
 
     res.json({
@@ -173,7 +206,8 @@ function validateCreate(body) {
 async function create(req, res) {
   const error = validateCreate(req.body);
   if (error) return res.status(400).json({ error });
-  const { deal_id, contractor_id, authority_id, start_date, end_date } = req.body;
+  const { deal_id, contractor_id, authority_id, start_date, end_date, category_ids } = req.body;
+  const categoryIds = parseCategoryIds(category_ids);
 
   const client = await pool.connect();
   try {
@@ -188,11 +222,15 @@ async function create(req, res) {
       return res.status(400).json({ error: "الصفقة غير موجودة" });
     }
 
-    const items = await fetchCumulativeItems(client, deal_id, start_date, end_date);
+    const items = await fetchCumulativeItems(client, deal_id, start_date, end_date, categoryIds);
 
     if (!items.length) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ error: "لا توجد مواد موزعة في هذه الفترة لإنشاء فاتورة" });
+      return res.status(400).json({
+        error: categoryIds
+          ? "لا توجد مواد موزعة تابعة للأصناف المختارة في هذه الفترة"
+          : "لا توجد مواد موزعة في هذه الفترة لإنشاء فاتورة",
+      });
     }
 
     const { rows: counterRows } = await client.query(
@@ -290,6 +328,7 @@ module.exports = {
   getFilterOptions,
   getById,
   getDealsByContractorAndAuthority,
+  getDealCategories,
   getCumulativeItemsForInvoice,
   create,
   remove,

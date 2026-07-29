@@ -4,6 +4,7 @@ import { Filter, Search, X, ChevronDown, Plus, Loader2 } from "lucide-react";
 import {
   getFilterOptions,
   getDealsByContractorAndAuthority,
+  getDealCategories,
   create,
 } from "@/services/invoicesService";
 
@@ -153,6 +154,10 @@ export default function InvoicesFilter({ isFiltered, resultCount, onFilter, onCl
   const [authorityId, setAuthorityId] = useState("");
   const [dealId, setDealId] = useState("");
 
+  const [categories, setCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
   const [startDay, setStartDay] = useState(firstDayOfMonth.day);
   const [startMonth, setStartMonth] = useState(firstDayOfMonth.month);
   const [startYear, setStartYear] = useState(firstDayOfMonth.year);
@@ -177,11 +182,21 @@ export default function InvoicesFilter({ isFiltered, resultCount, onFilter, onCl
     }
   }, [contractorId, authorityId]);
 
+  useEffect(() => {
+    if (!dealId) return;
+    setCategoriesLoading(true);
+    getDealCategories(dealId)
+      .then((rows) => setCategories(rows || []))
+      .finally(() => setCategoriesLoading(false));
+  }, [dealId]);
+
   const handleContractorChange = (id) => {
     setContractorId(id);
     setAuthorityId("");
     setDealId("");
     setDeals([]);
+    setCategories([]);
+    setSelectedCategories([]);
     setError("");
   };
 
@@ -189,17 +204,28 @@ export default function InvoicesFilter({ isFiltered, resultCount, onFilter, onCl
     setAuthorityId(id);
     setDealId("");
     setDeals([]);
+    setCategories([]);
+    setSelectedCategories([]);
     setError("");
   };
 
   const handleDealChange = (id) => {
     setDealId(id);
+    setCategories([]);
+    setSelectedCategories([]);
     setError("");
+  };
+
+  const toggleCategory = (id) => {
+    setSelectedCategories((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
   };
 
   const hasSelection = Boolean(contractorId || authorityId || dealId);
   const dateReady = Boolean(startDay && startMonth && startYear && endDay && endMonth && endYear);
-  const canCreate = Boolean(dealId) && dateReady;
+  const categoriesReady = categories.length === 0 || selectedCategories.length > 0;
+  const canCreate = Boolean(dealId) && dateReady && categoriesReady;
 
   const handleFilter = () => {
     if (!hasSelection) return;
@@ -237,6 +263,7 @@ export default function InvoicesFilter({ isFiltered, resultCount, onFilter, onCl
         authority_id: authorityId,
         start_date: startDate,
         end_date: endDate,
+        category_ids: selectedCategories,
       });
       onToast?.("تم إنشاء الفاتورة بنجاح");
       onCreated?.(invoice);
@@ -291,6 +318,75 @@ export default function InvoicesFilter({ isFiltered, resultCount, onFilter, onCl
           />
         </div>
       </div>
+
+      {dealId && (
+        <div>
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+            <div>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300">أصناف المواد الأولية</label>
+              <span className="text-xs text-slate-400 dark:text-slate-500 mr-1.5">(اختر صنفاً واحداً أو أكثر)</span>
+            </div>
+            {selectedCategories.length > 0 && (
+              <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full font-medium">
+                {selectedCategories.length} صنف محدد
+              </span>
+            )}
+          </div>
+
+          {categoriesLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 size={20} className="animate-spin text-slate-400 dark:text-slate-500" />
+            </div>
+          ) : categories.length === 0 ? (
+            <p className="text-xs text-slate-400 dark:text-slate-500">لا توجد أصناف مواد لهذه الصفقة</p>
+          ) : (
+            <>
+              <div className="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategories(categories.map((c) => c.id))}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                >
+                  تحديد الكل
+                </button>
+                <span className="text-slate-300 dark:text-slate-600">|</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategories([])}
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:underline font-medium"
+                >
+                  إلغاء الكل
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => (
+                  <label
+                    key={cat.id}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-sm font-medium select-none ${
+                      selectedCategories.includes(cat.id)
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-blue-400"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="hidden"
+                      checked={selectedCategories.includes(cat.id)}
+                      onChange={() => toggleCategory(cat.id)}
+                    />
+                    {cat.name_ar}
+                  </label>
+                ))}
+              </div>
+
+              {!categoriesReady && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">يرجى اختيار صنف واحد على الأقل</p>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <DateSelectGroup
