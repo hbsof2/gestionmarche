@@ -9,6 +9,7 @@ import DealsPage from "@/components/deals/DealsPage";
 import ReceiptsPage from "@/components/receipts/ReceiptsPage";
 import InvoicesPage from "@/components/invoices/InvoicesPage";
 import UsersPage from "@/components/users/UsersPage";
+import FAQPage from "@/components/faq/FAQPage";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { isAuthenticated, getUser, logout } from "@/lib/auth";
 import {
@@ -36,6 +37,7 @@ import {
   ChevronLeft,
   LogOut,
   Home,
+  HelpCircle,
 } from "lucide-react";
 
 const sections = [
@@ -136,6 +138,16 @@ const sections = [
       { id: "backup", label: "إنشاء نسخة", icon: Download },
       { id: "send", label: "إرسال عبر الإيميل", icon: Mail },
       { id: "list", label: "النسخ السابقة", icon: List },
+    ],
+  },
+  {
+    id: "faq",
+    label: "الأسئلة الشائعة",
+    icon: HelpCircle,
+    color: "#1A5276",
+    services: [
+      { id: "browse", label: "تصفح الأسئلة", icon: List },
+      { id: "search", label: "بحث", icon: Search },
     ],
   },
 ];
@@ -401,6 +413,11 @@ export default function Dashboard() {
             />
           ) : activeSection === "users" ? (
             <UsersPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : activeSection === "faq" ? (
+            <FAQPage
               activeService={activeService}
               onServiceChange={setActiveService}
             />
