@@ -71,16 +71,20 @@ async function create(req, res) {
   const {
     designation, full_name, birth_date, wilaya, commune,
     nis, nif, rc_number, rc_date, address, phone_fixed, phone_mobile, fax,
+    bank_name, bank_address, bank_rip, ai_number,
   } = req.body;
   try {
     const { rows } = await pool.query(
       `INSERT INTO contractors
-        (designation, full_name, birth_date, wilaya, commune, nis, nif, rc_number, rc_date, address, phone_fixed, phone_mobile, fax, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        (designation, full_name, birth_date, wilaya, commune, nis, nif, rc_number, rc_date, address, phone_fixed, phone_mobile, fax, bank_name, bank_address, bank_rip, ai_number, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
       [
         designation.trim(), full_name.trim(), birth_date, wilaya.trim(), commune.trim(),
         nis.trim(), nif.trim(), rc_number.trim(), rc_date, address.trim(),
-        phone_fixed.trim(), phone_mobile.trim(), fax?.trim() || null, req.user.id,
+        phone_fixed.trim(), phone_mobile.trim(), fax?.trim() || null,
+        bank_name?.trim() || null, bank_address?.trim() || null, bank_rip?.trim() || null,
+        ai_number?.trim() || null,
+        req.user.id,
       ]
     );
     res.status(201).json(rows[0]);
@@ -95,17 +99,21 @@ async function update(req, res) {
   const {
     designation, full_name, birth_date, wilaya, commune,
     nis, nif, rc_number, rc_date, address, phone_fixed, phone_mobile, fax,
+    bank_name, bank_address, bank_rip, ai_number,
   } = req.body;
   try {
     const { rows } = await pool.query(
       `UPDATE contractors
        SET designation=$1, full_name=$2, birth_date=$3, wilaya=$4, commune=$5, nis=$6, nif=$7,
-           rc_number=$8, rc_date=$9, address=$10, phone_fixed=$11, phone_mobile=$12, fax=$13
-       WHERE id=$14 RETURNING *`,
+           rc_number=$8, rc_date=$9, address=$10, phone_fixed=$11, phone_mobile=$12, fax=$13,
+           bank_name=$14, bank_address=$15, bank_rip=$16, ai_number=$17
+       WHERE id=$18 RETURNING *`,
       [
         designation.trim(), full_name.trim(), birth_date, wilaya.trim(), commune.trim(),
         nis.trim(), nif.trim(), rc_number.trim(), rc_date, address.trim(),
         phone_fixed.trim(), phone_mobile.trim(), fax?.trim() || null,
+        bank_name?.trim() || null, bank_address?.trim() || null, bank_rip?.trim() || null,
+        ai_number?.trim() || null,
         req.params.id,
       ]
     );

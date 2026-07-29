@@ -120,12 +120,16 @@ export default function InvoiceDetail({ invoice, onBack }) {
           <InfoField label="الولاية والبلدية" value={contractor ? `${contractor.wilaya} - ${contractor.commune}` : "-"} />
           <InfoField label="الرقم الإحصائي NIS" value={contractor?.nis} />
           <InfoField label="الرقم الجبائي NIF" value={contractor?.nif} />
+          {contractor?.ai_number && <InfoField label="رقم المادة AI n°" value={contractor.ai_number} />}
           <InfoField label="رقم السجل التجاري RC" value={contractor?.rc_number} />
           <InfoField label="تاريخ السجل التجاري" value={formatDate(contractor?.rc_date)} />
           <InfoField label="العنوان الكامل" value={contractor?.address} />
           <InfoField label="رقم الهاتف الثابت" value={contractor?.phone_fixed} />
           <InfoField label="رقم الهاتف المحمول" value={contractor?.phone_mobile} />
           {contractor?.fax && <InfoField label="رقم الفاكس" value={contractor.fax} />}
+          {contractor?.bank_name && <InfoField label="اسم البنك" value={contractor.bank_name} />}
+          {contractor?.bank_address && <InfoField label="عنوان البنك" value={contractor.bank_address} />}
+          {contractor?.bank_rip && <InfoField label="رقم الحساب RIP" value={contractor.bank_rip} />}
         </div>
       </div>
 

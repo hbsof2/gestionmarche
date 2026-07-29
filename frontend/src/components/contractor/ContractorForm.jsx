@@ -37,11 +37,15 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
     commune: contractor?.commune || "",
     nis: contractor?.nis || "",
     nif: contractor?.nif || "",
+    ai_number: contractor?.ai_number || "",
     rc_number: contractor?.rc_number || "",
     address: contractor?.address || "",
     phone_fixed: contractor?.phone_fixed || "",
     phone_mobile: contractor?.phone_mobile || "",
     fax: contractor?.fax || "",
+    bank_name: contractor?.bank_name || "",
+    bank_address: contractor?.bank_address || "",
+    bank_rip: contractor?.bank_rip || "",
   });
   const [birthDay, setBirthDay] = useState(initialBirthDate.day);
   const [birthMonth, setBirthMonth] = useState(initialBirthDate.month);
@@ -286,6 +290,21 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
             </div>
           </div>
 
+          {/* ai_number */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              رقم المادة AI n° <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري)</span>
+            </label>
+            <input
+              type="text"
+              dir="ltr"
+              value={form.ai_number}
+              onChange={(e) => set("ai_number", e.target.value)}
+              placeholder="مثال: AI-2024-001"
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            />
+          </div>
+
           {/* rc_number */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -419,6 +438,53 @@ export default function ContractorForm({ contractor, onSave, onCancel }) {
               onChange={(e) => set("fax", e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors"
             />
+          </div>
+
+          {/* Bank information */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-700 space-y-4">
+            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              المعلومات البنكية <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري)</span>
+            </h4>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                اسم البنك <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري)</span>
+              </label>
+              <input
+                type="text"
+                value={form.bank_name}
+                onChange={(e) => set("bank_name", e.target.value)}
+                placeholder="مثال: بنك الجزائر الخارجي"
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                عنوان البنك <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري)</span>
+              </label>
+              <input
+                type="text"
+                value={form.bank_address}
+                onChange={(e) => set("bank_address", e.target.value)}
+                placeholder="عنوان فرع البنك"
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                رقم الحساب البنكي RIP <span className="text-slate-400 dark:text-slate-500 font-normal">(اختياري)</span>
+              </label>
+              <input
+                type="text"
+                dir="ltr"
+                value={form.bank_rip}
+                onChange={(e) => set("bank_rip", e.target.value)}
+                placeholder="00000000000000000000"
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              />
+            </div>
           </div>
 
           {/* Submit error */}
