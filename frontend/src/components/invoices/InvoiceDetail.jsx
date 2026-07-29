@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ArrowRight, Receipt, Download, UserCheck, Building2, Package, Users } from "lucide-react";
+import exportInvoiceExcel from "@/lib/exportInvoiceExcel";
 
 const COLOR = "#A93226";
 
@@ -39,7 +40,14 @@ function InfoField({ label, value }) {
 
 export default function InvoiceDetail({ invoice, onBack }) {
   const [exportLanguage, setExportLanguage] = useState("AR");
+  const [isExporting, setIsExporting] = useState(false);
+  const [toast, setToast] = useState(null);
   const { contractor, authority, items = [] } = invoice;
+
+  const showToast = (message, type = "success", duration = 3500) => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), duration);
+  };
 
   const totals = items.reduce(
     (acc, item) => ({
@@ -48,6 +56,22 @@ export default function InvoiceDetail({ invoice, onBack }) {
     }),
     { ht: 0, ttc: 0 }
   );
+
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      await exportInvoiceExcel(invoice, exportLanguage);
+      showToast(
+        "تم تحميل الفاتورة بنجاح، افتح الملف ثم اضغط Ctrl+P للطباعة",
+        "success",
+        5000
+      );
+    } catch {
+      showToast("حدث خطأ أثناء تحميل الفاتورة", "error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -96,12 +120,15 @@ export default function InvoiceDetail({ invoice, onBack }) {
           </select>
 
           <button
-            type="button"
-            disabled
-            title="سيتم تفعيل هذه الخاصية قريباً"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-emerald-600 opacity-50 cursor-not-allowed transition-colors shadow-sm dark:bg-emerald-700 w-full sm:w-auto justify-center"
+            onClick={handleExportExcel}
+            disabled={!invoice?.items?.length || isExporting}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm dark:bg-emerald-700 dark:hover:bg-emerald-600 w-full sm:w-auto justify-center"
           >
-            <Download size={16} />
+            {isExporting ? (
+              <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            ) : (
+              <Download size={16} />
+            )}
             تحميل Excel
           </button>
         </div>
@@ -237,6 +264,17 @@ export default function InvoiceDetail({ invoice, onBack }) {
           <p className="text-xl font-bold text-green-600 dark:text-green-400">{formatAmount(totals.ttc)}</p>
         </div>
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all duration-300 whitespace-nowrap ${
+            toast.type === "error" ? "bg-red-500" : "bg-green-600"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }
