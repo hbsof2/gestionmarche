@@ -39,6 +39,13 @@ export async function getNextCounter(dealId) {
   return data;
 }
 
+export async function getCumulativeItems(dealId, branchId, startDate, endDate) {
+  const { data } = await api.get("/api/receipts/cumulative-items", {
+    params: { deal_id: dealId, branch_id: branchId, start_date: startDate, end_date: endDate },
+  });
+  return data;
+}
+
 export async function create(body) {
   const { data } = await api.post("/api/receipts", body);
   return data;

@@ -6,6 +6,7 @@ const {
   getDealsByContractorAndAuthority,
   getDealBranchesForReceipt,
   getNextCounter,
+  getCumulativeItems,
   create,
   update,
   remove,
@@ -23,6 +24,7 @@ router.get("/filter-options", verifyToken, getFilterOptions);
 router.get("/deals", verifyToken, getDealsByContractorAndAuthority);
 router.get("/deal-branches/:dealId", verifyToken, getDealBranchesForReceipt);
 router.get("/next-counter/:dealId", verifyToken, getNextCounter);
+router.get("/cumulative-items", verifyToken, getCumulativeItems);
 
 router.get("/:id/items", verifyToken, getReceiptItems);
 router.get("/:id/available-materials", verifyToken, getDealMaterialsForReceipt);

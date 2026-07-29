@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Filter, Search, X, ChevronDown } from "lucide-react";
+import { Filter, Search, X, ChevronDown, Download } from "lucide-react";
 import {
   getFilterOptions,
   getDealsByContractorAndAuthority,
   getDealBranchesForReceipt,
 } from "@/services/receiptsService";
+import CumulativeExportModal from "./CumulativeExportModal";
 
 function FilterSearchableSelect({ value, options, getLabel, placeholder, onChange, disabled, disabledMessage }) {
   const [open, setOpen] = useState(false);
@@ -90,7 +91,7 @@ function FilterSearchableSelect({ value, options, getLabel, placeholder, onChang
   );
 }
 
-export default function ReceiptsFilter({ isFiltered, resultCount, onFilter, onClearFilter }) {
+export default function ReceiptsFilter({ isFiltered, resultCount, onFilter, onClearFilter, onToast }) {
   const [contractors, setContractors] = useState([]);
   const [authorities, setAuthorities] = useState([]);
   const [deals, setDeals] = useState([]);
@@ -100,6 +101,7 @@ export default function ReceiptsFilter({ isFiltered, resultCount, onFilter, onCl
   const [authorityId, setAuthorityId] = useState("");
   const [dealId, setDealId] = useState("");
   const [branchId, setBranchId] = useState("");
+  const [showCumulativeModal, setShowCumulativeModal] = useState(false);
 
   useEffect(() => {
     getFilterOptions().then((res) => {
@@ -241,7 +243,27 @@ export default function ReceiptsFilter({ isFiltered, resultCount, onFilter, onCl
             إلغاء الفلترة
           </button>
         )}
+
+        {dealId && branchId && (
+          <button
+            type="button"
+            onClick={() => setShowCumulativeModal(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm dark:bg-emerald-700 dark:hover:bg-emerald-600"
+          >
+            <Download size={15} />
+            تحميل Excel
+          </button>
+        )}
       </div>
+
+      {showCumulativeModal && (
+        <CumulativeExportModal
+          dealId={dealId}
+          branchId={branchId}
+          onClose={() => setShowCumulativeModal(false)}
+          onSuccess={() => onToast?.("تم تحميل الملف بنجاح")}
+        />
+      )}
 
       {isFiltered && (
         <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 font-medium">

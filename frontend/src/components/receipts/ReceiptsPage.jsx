@@ -177,6 +177,7 @@ export default function ReceiptsPage({ activeService, onServiceChange }) {
           resultCount={receipts.length}
           onFilter={handleFilterApply}
           onClearFilter={handleFilterClear}
+          onToast={showToast}
         />
       )}
 

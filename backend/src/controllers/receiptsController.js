@@ -535,6 +535,66 @@ async function removeReceiptItem(req, res) {
   }
 }
 
+async function getCumulativeItems(req, res) {
+  const { deal_id, branch_id, start_date, end_date } = req.query;
+  if (!deal_id || !branch_id || !start_date || !end_date) {
+    return res.status(400).json({ error: "يرجى تحديد الصفقة والفرع وتاريخ البداية وتاريخ النهاية" });
+  }
+  try {
+    const { rows: infoRows } = await pool.query(
+      `SELECT
+        d.reference AS deal_reference,
+        ab.name AS branch_name,
+        ab.wilaya,
+        ab.commune,
+        ab.phone AS branch_phone,
+        ca.name AS authority_name,
+        c.full_name AS contractor_name,
+        c.phone_fixed AS contractor_phone
+       FROM deals d
+       JOIN authority_branches ab ON ab.id = $2
+       JOIN contracting_authorities ca ON d.authority_id = ca.id
+       JOIN contractors c ON d.contractor_id = c.id
+       WHERE d.id = $1`,
+      [deal_id, branch_id]
+    );
+    if (!infoRows.length) return res.status(404).json({ error: "الصفقة غير موجودة" });
+
+    const { rows: items } = await pool.query(
+      `SELECT
+        rm.name_ar,
+        rm.name_lat,
+        rm.unit,
+        mc.name_ar AS category_name,
+        SUM(ri.quantity) AS total_quantity,
+        ri.unit_price,
+        ri.tva,
+        SUM(ri.quantity * ri.unit_price) AS total_ht,
+        SUM(ri.quantity * ri.unit_price * (1 + ri.tva/100)) AS total_ttc
+       FROM receipt_items ri
+       JOIN receipts r ON ri.receipt_id = r.id
+       JOIN raw_materials rm ON ri.material_id = rm.id
+       JOIN deal_items di ON ri.deal_item_id = di.id
+       JOIN material_categories mc ON di.category_id = mc.id
+       WHERE r.deal_id = $1
+         AND r.branch_id = $2
+         AND r.receipt_date >= $3
+         AND r.receipt_date <= $4
+       GROUP BY rm.name_ar, rm.name_lat, rm.unit, mc.name_ar, ri.unit_price, ri.tva
+       ORDER BY rm.name_ar`,
+      [deal_id, branch_id, start_date, end_date]
+    );
+
+    res.json({
+      items,
+      info: infoRows[0],
+      period: { start_date, end_date },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getAll,
   getFilterOptions,
@@ -542,6 +602,7 @@ module.exports = {
   getDealsByContractorAndAuthority,
   getDealBranchesForReceipt,
   getNextCounter,
+  getCumulativeItems,
   create,
   update,
   remove,
