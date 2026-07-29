@@ -7,6 +7,7 @@ import AuthorityBranchesPage from "@/components/authority-branches/AuthorityBran
 import ContractorPage from "@/components/contractor/ContractorPage";
 import DealsPage from "@/components/deals/DealsPage";
 import ReceiptsPage from "@/components/receipts/ReceiptsPage";
+import InvoicesPage from "@/components/invoices/InvoicesPage";
 import UsersPage from "@/components/users/UsersPage";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { isAuthenticated, getUser, logout } from "@/lib/auth";
@@ -390,6 +391,11 @@ export default function Dashboard() {
             />
           ) : activeSection === "receipts" ? (
             <ReceiptsPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : activeSection === "invoices" ? (
+            <InvoicesPage
               activeService={activeService}
               onServiceChange={setActiveService}
             />
