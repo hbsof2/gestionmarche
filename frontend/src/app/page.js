@@ -9,6 +9,7 @@ import DealsPage from "@/components/deals/DealsPage";
 import ReceiptsPage from "@/components/receipts/ReceiptsPage";
 import InvoicesPage from "@/components/invoices/InvoicesPage";
 import UsersPage from "@/components/users/UsersPage";
+import BackupPage from "@/components/database-backup/BackupPage";
 import FAQPage from "@/components/faq/FAQPage";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { isAuthenticated, getUser, logout } from "@/lib/auth";
@@ -413,6 +414,11 @@ export default function Dashboard() {
             />
           ) : activeSection === "users" ? (
             <UsersPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+            />
+          ) : activeSection === "database-backup" ? (
+            <BackupPage
               activeService={activeService}
               onServiceChange={setActiveService}
             />

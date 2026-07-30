@@ -19,6 +19,9 @@ out/
 build/
 dist/
 
+# Database backups (generated at runtime, contain full DB dumps)
+backend/backups/
+
 # Debug logs
 npm-debug.log*
 yarn-debug.log*

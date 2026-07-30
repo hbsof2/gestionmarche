@@ -12,11 +12,12 @@ const dealsRouter             = require("./routes/deals");
 const receiptsRouter          = require("./routes/receipts");
 const invoicesRouter          = require("./routes/invoices");
 const usersRouter             = require("./routes/users");
-const backupRouter            = require("./routes/backup");
+const backupsRouter           = require("./routes/backups");
 const activityLogsRouter      = require("./routes/activityLogs");
 
 const pool = require("./config/db");
 const cleanupOldLogs = require("./utils/cleanupLogs");
+const cleanupOldBackups = require("./utils/cleanupBackups");
 
 const app = express();
 
@@ -39,7 +40,7 @@ app.use("/api/deals",                 dealsRouter);
 app.use("/api/receipts",              receiptsRouter);
 app.use("/api/invoices",              invoicesRouter);
 app.use("/api/users",                 usersRouter);
-app.use("/api/backup",                backupRouter);
+app.use("/api/backups",               backupsRouter);
 app.use("/api/activity-logs",         activityLogsRouter);
 
 // 404 fallback
@@ -64,4 +65,10 @@ setInterval(async () => {
   } finally {
     client.release();
   }
+}, 24 * 60 * 60 * 1000);
+
+// Auto-delete backup files/records older than 5 days
+cleanupOldBackups(pool);
+setInterval(() => {
+  cleanupOldBackups(pool);
 }, 24 * 60 * 60 * 1000);
