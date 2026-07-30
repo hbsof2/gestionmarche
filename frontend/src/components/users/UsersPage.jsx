@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Users as UsersIcon, ShieldAlert } from "lucide-react";
+import { Plus, Users as UsersIcon, ShieldAlert, Activity } from "lucide-react";
 import UsersList from "./UsersList";
 import UserForm from "./UserForm";
 import ResetPasswordModal from "./ResetPasswordModal";
 import UserDeleteModal from "./UserDeleteModal";
+import ActivityLogsPage from "./ActivityLogsPage";
 import { getAll, create, update, resetPassword, remove } from "@/services/usersService";
 import { getUser } from "@/lib/auth";
 
@@ -22,6 +23,7 @@ export default function UsersPage({ activeService, onServiceChange }) {
   const [resetTarget, setResetTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
+  const [showActivityLogs, setShowActivityLogs] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -115,6 +117,10 @@ export default function UsersPage({ activeService, onServiceChange }) {
     );
   }
 
+  if (showActivityLogs) {
+    return <ActivityLogsPage onBack={() => setShowActivityLogs(false)} />;
+  }
+
   return (
     <div className="space-y-4">
 
@@ -135,6 +141,14 @@ export default function UsersPage({ activeService, onServiceChange }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowActivityLogs(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors shrink-0 hover:bg-slate-50 dark:hover:bg-slate-700"
+            style={{ borderColor: COLOR, color: COLOR }}
+          >
+            <Activity size={16} />
+            سجل العمليات
+          </button>
           <button
             onClick={() => { setEditUser(null); setFormOpen(true); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium shadow-sm hover:opacity-90 transition-opacity shrink-0"

@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const { hashPassword } = require("../utils/password");
+const logActivity = require("../utils/activityLogger");
 
 const PERMISSION_FIELDS = [
   "can_manage_deals",
@@ -136,6 +137,15 @@ async function update(req, res) {
       `SELECT ${SAFE_COLUMNS} FROM users u LEFT JOIN users creator ON creator.id = u.created_by WHERE u.id = $1`,
       [rows[0].id]
     );
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "update",
+      action: `تعديل بيانات مستخدم: ${fullRows[0].username}`,
+      section: "users",
+      ipAddress: req.ip,
+    });
     res.json(fullRows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -150,10 +160,19 @@ async function resetPassword(req, res) {
   try {
     const password_hash = await hashPassword(new_password);
     const { rows } = await pool.query(
-      "UPDATE users SET password_hash=$1 WHERE id=$2 RETURNING id",
+      "UPDATE users SET password_hash=$1 WHERE id=$2 RETURNING id, username",
       [password_hash, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "المستخدم غير موجود" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "update",
+      action: `إعادة تعيين كلمة سر: ${rows[0].username}`,
+      section: "users",
+      ipAddress: req.ip,
+    });
     res.json({ message: "تم تغيير كلمة السر بنجاح" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -177,10 +196,19 @@ async function remove(req, res) {
     }
 
     const { rows } = await pool.query(
-      "DELETE FROM users WHERE id=$1 RETURNING id, full_name",
+      "DELETE FROM users WHERE id=$1 RETURNING id, full_name, username",
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "المستخدم غير موجود" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "delete",
+      action: `حذف مستخدم: ${rows[0].username}`,
+      section: "users",
+      ipAddress: req.ip,
+    });
     res.json({ deleted: rows[0].id, full_name: rows[0].full_name });
   } catch (err) {
     res.status(500).json({ error: err.message });

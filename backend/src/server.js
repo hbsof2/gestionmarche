@@ -13,6 +13,10 @@ const receiptsRouter          = require("./routes/receipts");
 const invoicesRouter          = require("./routes/invoices");
 const usersRouter             = require("./routes/users");
 const backupRouter            = require("./routes/backup");
+const activityLogsRouter      = require("./routes/activityLogs");
+
+const pool = require("./config/db");
+const cleanupOldLogs = require("./utils/cleanupLogs");
 
 const app = express();
 
@@ -36,6 +40,7 @@ app.use("/api/receipts",              receiptsRouter);
 app.use("/api/invoices",              invoicesRouter);
 app.use("/api/users",                 usersRouter);
 app.use("/api/backup",                backupRouter);
+app.use("/api/activity-logs",         activityLogsRouter);
 
 // 404 fallback
 app.use((req, res) => {
@@ -46,3 +51,17 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Auto-delete activity logs older than 3 days
+pool.connect().then((client) => {
+  cleanupOldLogs(client).finally(() => client.release());
+});
+setInterval(async () => {
+  const client = await pool.connect();
+  try {
+    await cleanupOldLogs(client);
+    console.log("Old activity logs cleaned up");
+  } finally {
+    client.release();
+  }
+}, 24 * 60 * 60 * 1000);

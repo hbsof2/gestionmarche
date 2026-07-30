@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const logActivity = require("../utils/activityLogger");
 
 async function getAllBranches(req, res) {
   const { page = 1, search = "" } = req.query;
@@ -91,6 +92,15 @@ async function updateBranch(req, res) {
       ]
     );
     if (!rows.length) return res.status(404).json({ error: "فرع المصلحة المتعاقدة غير موجود" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "update",
+      action: `تعديل فرع مصلحة: ${rows[0].name}`,
+      section: "authority_branches",
+      ipAddress: req.ip,
+    });
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -118,6 +128,15 @@ async function deleteBranch(req, res) {
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "فرع المصلحة المتعاقدة غير موجود" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "delete",
+      action: `حذف فرع مصلحة: ${rows[0].name}`,
+      section: "authority_branches",
+      ipAddress: req.ip,
+    });
     res.json({ deleted: rows[0].id, name: rows[0].name });
   } catch (err) {
     res.status(500).json({ error: err.message });

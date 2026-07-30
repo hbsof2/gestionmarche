@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const pool = require("../config/db");
 const { comparePassword, hashPassword } = require("../utils/password");
 const { JWT_SECRET, JWT_EXPIRES_IN } = require("../config/auth");
+const logActivity = require("../utils/activityLogger");
 
 const PERMISSION_FIELDS = [
   "can_manage_deals",
@@ -48,6 +49,16 @@ async function login(req, res) {
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
+
+    await logActivity(pool, {
+      userId: user.id,
+      username: user.username,
+      fullName: user.full_name,
+      actionType: "login",
+      action: "تسجيل الدخول للمنصة",
+      section: "auth",
+      ipAddress: req.ip,
+    });
 
     res.json({
       token,

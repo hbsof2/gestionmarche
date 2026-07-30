@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const tableExists = require("../utils/tableExists");
+const logActivity = require("../utils/activityLogger");
 const { createClient } = require("@supabase/supabase-js");
 
 const supabase = createClient(
@@ -84,6 +85,15 @@ async function updateMaterial(req, res) {
       [name_ar.trim(), name_lat || null, description || null, unit, image_url || null, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "المادة غير موجودة" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "update",
+      action: `تعديل مادة أولية: ${rows[0].name_ar}`,
+      section: "raw_materials",
+      ipAddress: req.ip,
+    });
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -113,6 +123,15 @@ async function deleteMaterial(req, res) {
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "المادة غير موجودة" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "delete",
+      action: `حذف مادة أولية: ${rows[0].name_ar}`,
+      section: "raw_materials",
+      ipAddress: req.ip,
+    });
     res.json({ deleted: rows[0].id, name: rows[0].name_ar });
   } catch (err) {
     res.status(500).json({ error: err.message });

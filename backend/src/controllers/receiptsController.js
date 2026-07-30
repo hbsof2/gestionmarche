@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const createDealSnapshot = require("../utils/dealSnapshot");
+const logActivity = require("../utils/activityLogger");
 
 const FULL_SELECT = `
   SELECT r.*, d.reference AS deal_reference,
@@ -209,6 +210,15 @@ async function update(req, res) {
       `${FULL_SELECT} WHERE r.id = $1`,
       [rows[0].id]
     );
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "update",
+      action: `تعديل وصل: ${fullRows[0].reference}`,
+      section: "receipts",
+      ipAddress: req.ip,
+    });
     res.json(fullRows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -236,6 +246,15 @@ async function remove(req, res) {
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "الوصل غير موجود" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "delete",
+      action: `حذف وصل: ${rows[0].reference}`,
+      section: "receipts",
+      ipAddress: req.ip,
+    });
     res.json({ deleted: rows[0].id, reference: rows[0].reference });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -475,6 +494,17 @@ async function updateReceiptItem(req, res) {
 
     await client.query("COMMIT");
 
+    const { rows: receiptRefRows } = await pool.query("SELECT reference FROM receipts WHERE id = $1", [req.params.id]);
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "update",
+      action: `تعديل مادة في وصل: ${receiptRefRows[0]?.reference || ""}`,
+      section: "receipts",
+      ipAddress: req.ip,
+    });
+
     const { rows: fullRows } = await pool.query(
       `${RECEIPT_ITEMS_SELECT} WHERE ri.id = $1`,
       [req.params.itemId]
@@ -526,6 +556,18 @@ async function removeReceiptItem(req, res) {
     );
 
     await client.query("COMMIT");
+
+    const { rows: receiptRefRows } = await pool.query("SELECT reference FROM receipts WHERE id = $1", [req.params.id]);
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "delete",
+      action: `حذف مادة من وصل: ${receiptRefRows[0]?.reference || ""}`,
+      section: "receipts",
+      ipAddress: req.ip,
+    });
+
     res.json({ deleted: item.id });
   } catch (err) {
     await client.query("ROLLBACK");

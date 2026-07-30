@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const logActivity = require("../utils/activityLogger");
 
 async function getAllCategories(req, res) {
   const { search = "" } = req.query;
@@ -54,6 +55,15 @@ async function updateCategory(req, res) {
       [name_ar.trim(), name_lat?.trim() || null, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "الصنف غير موجود" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "update",
+      action: `تعديل صنف: ${rows[0].name_ar}`,
+      section: "categories",
+      ipAddress: req.ip,
+    });
     res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -74,6 +84,15 @@ async function deleteCategory(req, res) {
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "الصنف غير موجود" });
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "delete",
+      action: `حذف صنف: ${rows[0].name_ar}`,
+      section: "categories",
+      ipAddress: req.ip,
+    });
     res.json({ deleted: rows[0].id, name: rows[0].name_ar });
   } catch (err) {
     res.status(500).json({ error: err.message });

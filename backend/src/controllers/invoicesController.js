@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const logActivity = require("../utils/activityLogger");
 
 const FULL_SELECT = `
   SELECT i.*, d.reference AS deal_reference,
@@ -314,6 +315,17 @@ async function remove(req, res) {
     await client.query("DELETE FROM invoices WHERE id = $1", [req.params.id]);
 
     await client.query("COMMIT");
+
+    await logActivity(pool, {
+      userId: req.user.id,
+      username: req.user.username,
+      fullName: req.user.full_name,
+      actionType: "delete",
+      action: `حذف فاتورة: ${rows[0].reference}`,
+      section: "invoices",
+      ipAddress: req.ip,
+    });
+
     res.json({ deleted: Number(req.params.id), reference: rows[0].reference });
   } catch (err) {
     await client.query("ROLLBACK");
