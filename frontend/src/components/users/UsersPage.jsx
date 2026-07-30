@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Users as UsersIcon, ShieldAlert, Activity } from "lucide-react";
+import { Plus, Users as UsersIcon, ShieldAlert, Activity, BarChart3 } from "lucide-react";
 import UsersList from "./UsersList";
 import UserForm from "./UserForm";
 import ResetPasswordModal from "./ResetPasswordModal";
 import UserDeleteModal from "./UserDeleteModal";
 import ActivityLogsPage from "./ActivityLogsPage";
+import UsersStatsPage from "./UsersStatsPage";
 import { getAll, create, update, resetPassword, remove } from "@/services/usersService";
 import { getUser } from "@/lib/auth";
 
@@ -24,6 +25,7 @@ export default function UsersPage({ activeService, onServiceChange }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
   const [showActivityLogs, setShowActivityLogs] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -117,6 +119,10 @@ export default function UsersPage({ activeService, onServiceChange }) {
     );
   }
 
+  if (showStats) {
+    return <UsersStatsPage onBack={() => setShowStats(false)} />;
+  }
+
   if (showActivityLogs) {
     return <ActivityLogsPage onBack={() => setShowActivityLogs(false)} />;
   }
@@ -141,6 +147,13 @@ export default function UsersPage({ activeService, onServiceChange }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowStats(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-400 transition-colors shrink-0 hover:bg-purple-50 dark:hover:bg-purple-500/10"
+          >
+            <BarChart3 size={16} />
+            إحصائيات
+          </button>
           <button
             onClick={() => setShowActivityLogs(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors shrink-0 hover:bg-slate-50 dark:hover:bg-slate-700"

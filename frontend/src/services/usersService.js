@@ -29,3 +29,13 @@ export async function remove(id) {
   const { data } = await api.delete(`/api/users/${id}`);
   return data;
 }
+
+export async function getUsersStats() {
+  const { data } = await api.get("/api/users/stats");
+  return data;
+}
+
+export async function getSingleUserStats(userId) {
+  const { data } = await api.get(`/api/users/${userId}/stats`);
+  return data;
+}

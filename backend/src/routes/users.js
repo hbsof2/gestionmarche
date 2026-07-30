@@ -1,7 +1,9 @@
 const router = require("express").Router();
-const { getAll, getById, create, update, resetPassword, remove } = require("../controllers/usersController");
+const { getAll, getById, create, update, resetPassword, remove, getUsersStats, getSingleUserStats } = require("../controllers/usersController");
 const { verifyToken, requireAdmin } = require("../middleware/auth");
 
+router.get("/stats", verifyToken, requireAdmin, getUsersStats);
+router.get("/:id/stats", verifyToken, requireAdmin, getSingleUserStats);
 router.get("/", verifyToken, requireAdmin, getAll);
 router.get("/:id", verifyToken, requireAdmin, getById);
 router.post("/", verifyToken, requireAdmin, create);
