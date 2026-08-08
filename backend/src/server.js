@@ -33,6 +33,7 @@ const corsOptions = {
     "http://localhost:3000",
     "https://gestionmarche.netlify.app",
     "https://hbsoftsalesmanager.netlify.app",
+    "https://gestionmarche.vercel.app",
     process.env.FRONTEND_URL,
   ].filter(Boolean),
   credentials: true,
@@ -41,6 +42,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 // Health check
