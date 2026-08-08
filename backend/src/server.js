@@ -28,7 +28,18 @@ const cleanupOldBackups = require("./utils/cleanupBackups");
 
 const app = express();
 
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:3000" }));
+const corsOptions = {
+  origin: [
+    "http://localhost:3000",
+    "https://hbsoftsalesmanager.netlify.app",
+    process.env.FRONTEND_URL,
+  ].filter(Boolean),
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Branch"],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Health check
