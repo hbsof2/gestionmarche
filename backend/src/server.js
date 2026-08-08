@@ -31,6 +31,7 @@ const app = express();
 const corsOptions = {
   origin: [
     "http://localhost:3000",
+    "https://gestionmarche.netlify.app",
     "https://hbsoftsalesmanager.netlify.app",
     process.env.FRONTEND_URL,
   ].filter(Boolean),
