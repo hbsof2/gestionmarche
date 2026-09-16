@@ -10,7 +10,7 @@ A web platform for managing Algerian public procurement deals (Marchés Publics)
 
 | Layer    | Technology              | Local port | Hosting  |
 |----------|-------------------------|------------|----------|
-| Frontend | Next.js 16 + Tailwind 4 (CSS-first config, no `tailwind.config.js`) | 3000       | Netlify  |
+| Frontend | Next.js 16 + Tailwind 4 (CSS-first config, no `tailwind.config.js`) | 3000       | Netlify + Vercel |
 | Backend  | Node.js + Express       | 5000       | Railway  |
 | Database | PostgreSQL (Supabase)   | —          | Supabase |
 | Storage  | Supabase Storage        | —          | Supabase |
@@ -26,6 +26,9 @@ cd frontend && npm run lint
 # Backend
 cd backend && npm run dev        # nodemon → http://localhost:5000
 cd backend && npm start          # node (production)
+
+# Run all migrations in order (same DATABASE_URL source; stops on first real error)
+node database/scripts/run_all_migrations.js
 
 # Run a specific migration (reads DATABASE_URL from frontend/.env.local)
 node database/scripts/run_migration.js 001_raw_materials.sql
@@ -75,7 +78,7 @@ Verify both layers are running:
 ```
 Receipts is the one exception to the page/offset pagination part of this shape — see "Receipts — default view and filtering" below.
 
-**API client** — `src/lib/api.js` is an axios instance pointed at `NEXT_PUBLIC_API_URL`. A request interceptor attaches `Authorization: Bearer <token>` from `lib/auth.js`'s `getToken()` to every outgoing request. The response interceptor attaches `error.arabicMessage` so components can display Arabic errors without extra parsing, and additionally: a `401` calls `logout()` (clears `localStorage` and hard-redirects to `/login` — this is a real `window.location.href` navigation, not a Next router push, since a torn-down auth state shouldn't leave stale component state around); a `403` dispatches a `window` `CustomEvent("auth:forbidden", { detail: message })` instead of showing anything itself, because `api.js` is a plain lib file with no React/toast context — `app/page.js`'s `Dashboard` component is the one listener that turns that event into a floating toast. The `401` handler explicitly skips `/api/auth/login` requests (checked via `error.config.url`) so a failed login attempt shows its error inline on the login form instead of hard-redirecting and wiping it.
+**API client** — `src/lib/api.js` is an axios instance pointed at `NEXT_PUBLIC_API_URL` (no `localhost` fallback, no `timeout`). A request interceptor attaches `Authorization: Bearer <token>` from `lib/auth.js`'s `getToken()` to every outgoing request. **There is currently no response interceptor** — a prior version attached `error.arabicMessage` to every failed request and handled `401`/`403` globally (auto-`logout()` on 401 except for the login request itself, and a `window` `CustomEvent("auth:forbidden", ...)` on 403 that `app/page.js`'s `Dashboard` turned into a toast); that was intentionally stripped down to match a simplified reference implementation. Every place in this doc (and in the components themselves) that mentions `error.arabicMessage`, auto-logout-on-401, or the `auth:forbidden` event is describing dead code paths until that interceptor is restored — components reading `error.arabicMessage` will get `undefined` and fall back to whatever they render for a missing message. Restore the old interceptor logic in `api.js` before relying on any of that behavior again.
 
 **Authentication** — `src/lib/auth.js` is the single source of truth for client-side session state, all backed by `localStorage` (`auth_token` / `auth_user`, both written by the login page on success): `getToken()`, `getUser()`, `isAuthenticated()`, `logout()`, and `hasPermission(permission)` (`true` unconditionally for `role === "admin"`, otherwise reads `user.permissions[permission]`). `app/login/page.js` is the only unauthenticated route — it redirects to `/` if already authenticated (mirrors the guard the other direction) and posts to `/api/auth/login` directly via `api` (not a service file, since there's no other auth-shaped call to share a module with). `app/page.js`'s `Dashboard` component gates the entire shell: a `checkingAuth` state renders a bare spinner until an effect confirms `isAuthenticated()` (redirecting to `/login` if not) and loads `getUser()` into state for the header's name/role badge and the sidebar's logout button (`logout()` from `lib/auth.js`).
 
@@ -84,7 +87,7 @@ Receipts is the one exception to the page/offset pagination part of this shape �
 Key files:
 - `app/layout.js` — sets `lang="ar" dir="rtl"`, loads Tajawal font, wraps `children` in `ThemeProvider`, and inlines an anti-flash-of-wrong-theme script in `<head>` that reads `localStorage.theme` and adds the `dark` class to `<html>` before hydration (`<html>` carries `suppressHydrationWarning` because of this intentional pre-hydration mutation — don't remove it)
 - `src/lib/supabase.js` — anon-key Supabase client + `testConnection()` utility
-- `src/lib/api.js` — axios instance with Arabic error interceptor
+- `src/lib/api.js` — axios instance, request-only interceptor (attaches the auth token); no response interceptor currently (see the API client note above)
 - `app/api/test-connection/route.js` — Next.js API route for connection health check
 - `src/data/` — static reference datasets bundled with the frontend (e.g. `algeria-wilayas.js`: all 58 wilayas with their communes in Arabic, keyed by `code`). Import directly; these are not fetched from the API.
 
