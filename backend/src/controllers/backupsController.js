@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const pool = require("../config/db");
-const backupDatabase = require("../utils/backupDatabase");
+const { backupDatabase, generateBackupSqlInMemory } = require("../utils/backupDatabase");
 const sendBackupEmail = require("../utils/sendBackupEmail");
 
 function formatFileSize(bytes) {
@@ -29,35 +29,28 @@ async function createBackup(req, res) {
   }
 }
 
+// Always regenerates the dump in memory and emails it directly — Railway's
+// filesystem is ephemeral, so this never depends on a file surviving on disk
+// (unlike createBackup/downloadBackup below, which still use local disk).
 async function sendBackup(req, res) {
-  const { backup_id } = req.body;
-  if (!backup_id) return res.status(400).json({ error: "النسخة الاحتياطية مطلوبة" });
-
   const toEmail = process.env.SMTP_USER;
   if (!toEmail) {
     return res.status(400).json({ error: "لم يتم إعداد البريد الإلكتروني في إعدادات الخادم" });
   }
 
   try {
+    const { filename, content } = await generateBackupSqlInMemory();
+
+    await sendBackupEmail(content, filename, toEmail);
+
+    const fileSize = Buffer.byteLength(content, "utf8");
     const { rows } = await pool.query(
-      "SELECT filename, file_path FROM backups WHERE id = $1",
-      [backup_id]
-    );
-    if (!rows.length) return res.status(404).json({ error: "النسخة الاحتياطية غير موجودة" });
-
-    const { filename, file_path } = rows[0];
-    if (!fs.existsSync(file_path)) {
-      return res.status(404).json({ error: "ملف النسخة الاحتياطية غير موجود على الخادم" });
-    }
-
-    await sendBackupEmail(file_path, filename, toEmail);
-
-    const { rows: updated } = await pool.query(
-      "UPDATE backups SET email_sent_to = $1 WHERE id = $2 RETURNING *",
-      [toEmail, backup_id]
+      `INSERT INTO backups (filename, file_path, file_size, email_sent_to, created_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [filename, "in-memory", fileSize, toEmail, req.user.id]
     );
 
-    res.json(updated[0]);
+    res.json(rows[0]);
   } catch (err) {
     console.error("Backup email error:", err);
     res.status(500).json({ error: "فشل إرسال البريد الإلكتروني، تحقق من إعدادات SMTP" });

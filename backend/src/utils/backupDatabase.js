@@ -21,40 +21,58 @@ function buildFilename(now) {
   return `backup_${dateStr}_${timeStr}.sql`;
 }
 
+async function buildBackupSql(client, now) {
+  let sqlContent = `-- Database Backup\n-- Created: ${now.toISOString()}\n-- Platform: منصة تسيير الصفقات\n\n`;
+  sqlContent += `SET client_encoding = 'UTF8';\n\n`;
+
+  for (const table of TABLES) {
+    try {
+      const result = await client.query(`SELECT * FROM ${table}`);
+      if (result.rows.length > 0) {
+        sqlContent += `-- Table: ${table}\n`;
+        for (const row of result.rows) {
+          const columns = Object.keys(row).join(", ");
+          const values = Object.values(row)
+            .map((val) => {
+              if (val === null) return "NULL";
+              if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
+              if (typeof val === "number") return val;
+              if (val instanceof Date) return `'${val.toISOString()}'`;
+              return `'${String(val).replace(/'/g, "''")}'`;
+            })
+            .join(", ");
+          sqlContent += `INSERT INTO ${table} (${columns}) VALUES (${values});\n`;
+        }
+        sqlContent += `\n`;
+      }
+    } catch (e) {
+      sqlContent += `-- Skipped table ${table}: ${e.message}\n\n`;
+    }
+  }
+
+  return sqlContent;
+}
+
 async function jsonFallbackBackup(filePath, now) {
   console.warn("pg_dump not available, creating SQL INSERT backup instead");
 
   const client = await pool.connect();
   try {
-    let sqlContent = `-- Database Backup\n-- Created: ${now.toISOString()}\n-- Platform: منصة تسيير الصفقات\n\n`;
-    sqlContent += `SET client_encoding = 'UTF8';\n\n`;
-
-    for (const table of TABLES) {
-      try {
-        const result = await client.query(`SELECT * FROM ${table}`);
-        if (result.rows.length > 0) {
-          sqlContent += `-- Table: ${table}\n`;
-          for (const row of result.rows) {
-            const columns = Object.keys(row).join(", ");
-            const values = Object.values(row)
-              .map((val) => {
-                if (val === null) return "NULL";
-                if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
-                if (typeof val === "number") return val;
-                if (val instanceof Date) return `'${val.toISOString()}'`;
-                return `'${String(val).replace(/'/g, "''")}'`;
-              })
-              .join(", ");
-            sqlContent += `INSERT INTO ${table} (${columns}) VALUES (${values});\n`;
-          }
-          sqlContent += `\n`;
-        }
-      } catch (e) {
-        sqlContent += `-- Skipped table ${table}: ${e.message}\n\n`;
-      }
-    }
-
+    const sqlContent = await buildBackupSql(client, now);
     fs.writeFileSync(filePath, sqlContent, "utf8");
+  } finally {
+    client.release();
+  }
+}
+
+// Used by the "send backup by email" flow, which must not depend on the local
+// disk at all (Railway's filesystem is ephemeral and gets wiped on redeploy).
+async function generateBackupSqlInMemory() {
+  const now = new Date();
+  const client = await pool.connect();
+  try {
+    const content = await buildBackupSql(client, now);
+    return { filename: buildFilename(now), content };
   } finally {
     client.release();
   }
@@ -84,4 +102,4 @@ async function backupDatabase() {
   return { filename, filePath, fileSize: stats.size };
 }
 
-module.exports = backupDatabase;
+module.exports = { backupDatabase, generateBackupSqlInMemory };

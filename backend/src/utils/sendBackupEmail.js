@@ -1,7 +1,6 @@
 const nodemailer = require("nodemailer");
-const fs = require("fs");
 
-async function sendBackupEmail(filePath, filename, toEmail) {
+async function sendBackupEmail(content, filename, toEmail) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT),
@@ -12,8 +11,8 @@ async function sendBackupEmail(filePath, filename, toEmail) {
     },
   });
 
-  const fileSize = fs.statSync(filePath).size;
-  const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
+  const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content, "utf8");
+  const fileSizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
 
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
@@ -50,7 +49,7 @@ async function sendBackupEmail(filePath, filename, toEmail) {
     attachments: [
       {
         filename: filename,
-        path: filePath,
+        content: buffer,
         contentType: "application/sql",
       },
     ],
