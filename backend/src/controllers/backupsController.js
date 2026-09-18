@@ -1,8 +1,23 @@
 const fs = require("fs");
 const path = require("path");
 const pool = require("../config/db");
-const { backupDatabase, generateBackupSqlInMemory } = require("../utils/backupDatabase");
+const { generateBackupSqlInMemory } = require("../utils/backupDatabase");
 const sendBackupEmail = require("../utils/sendBackupEmail");
+
+// Short-lived in-process cache so a backup's exact bytes can be re-downloaded
+// or re-sent shortly after creation without touching disk (Railway's
+// filesystem is ephemeral). This does NOT survive a process restart/redeploy
+// and isn't shared across replicas if this app is ever scaled horizontally —
+// every reader below falls back to regenerating a fresh dump on a cache miss,
+// so a stale/missing entry never hard-fails, it just won't be byte-identical
+// to the original.
+if (!global.backupCache) global.backupCache = new Map();
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+function cacheBackup(id, filename, content) {
+  global.backupCache.set(id, { filename, content });
+  setTimeout(() => global.backupCache.delete(id), CACHE_TTL_MS);
+}
 
 function formatFileSize(bytes) {
   if (bytes === null || bytes === undefined) return "-";
@@ -14,43 +29,74 @@ function formatFileSize(bytes) {
 
 async function createBackup(req, res) {
   try {
-    const { filename, filePath, fileSize } = await backupDatabase();
+    const { filename, content } = await generateBackupSqlInMemory();
+    const fileSize = Buffer.byteLength(content, "utf8");
 
     const { rows } = await pool.query(
       `INSERT INTO backups (filename, file_path, file_size, created_by)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [filename, filePath, fileSize, req.user.id]
+      [filename, "in-memory", fileSize, req.user.id]
     );
 
-    res.status(201).json(rows[0]);
+    const backup = rows[0];
+    cacheBackup(backup.id, filename, content);
+
+    res.status(201).json(backup);
   } catch (err) {
     console.error("Backup creation error:", err);
     res.status(500).json({ error: "فشل إنشاء النسخة الاحتياطية، تحقق من إعدادات الخادم" });
   }
 }
 
-// Always regenerates the dump in memory and emails it directly — Railway's
-// filesystem is ephemeral, so this never depends on a file surviving on disk
-// (unlike createBackup/downloadBackup below, which still use local disk).
 async function sendBackup(req, res) {
+  console.log("sendBackup called with body:", req.body);
+  console.log("SMTP settings:", {
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    user: process.env.SMTP_USER,
+    from: process.env.SMTP_FROM,
+    pass: process.env.SMTP_PASS ? "exists" : "missing",
+  });
+
+  const { backup_id } = req.body;
   const toEmail = process.env.SMTP_USER;
   if (!toEmail) {
     return res.status(400).json({ error: "لم يتم إعداد البريد الإلكتروني في إعدادات الخادم" });
   }
 
   try {
-    const { filename, content } = await generateBackupSqlInMemory();
+    const cached = backup_id ? global.backupCache.get(Number(backup_id)) : null;
+    let filename, content;
+    if (cached) {
+      console.log("Using cached backup content");
+      ({ filename, content } = cached);
+    } else {
+      console.log(backup_id ? "Cache miss - regenerating backup" : "No backup_id - generating fresh backup");
+      ({ filename, content } = await generateBackupSqlInMemory());
+    }
 
     await sendBackupEmail(content, filename, toEmail);
 
-    const fileSize = Buffer.byteLength(content, "utf8");
-    const { rows } = await pool.query(
-      `INSERT INTO backups (filename, file_path, file_size, email_sent_to, created_by)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [filename, "in-memory", fileSize, toEmail, req.user.id]
-    );
+    let backupRow;
+    if (backup_id) {
+      const { rows } = await pool.query(
+        "UPDATE backups SET email_sent_to = $1 WHERE id = $2 RETURNING *",
+        [toEmail, backup_id]
+      );
+      backupRow = rows[0];
+    }
+    if (!backupRow) {
+      const fileSize = Buffer.byteLength(content, "utf8");
+      const { rows } = await pool.query(
+        `INSERT INTO backups (filename, file_path, file_size, email_sent_to, created_by)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [filename, "in-memory", fileSize, toEmail, req.user.id]
+      );
+      backupRow = rows[0];
+    }
 
-    res.json(rows[0]);
+    console.log("Email sent successfully to:", toEmail);
+    res.json(backupRow);
   } catch (err) {
     console.error("Send backup full error:", err);
     console.error("Error code:", err.code);
@@ -63,19 +109,33 @@ async function sendBackup(req, res) {
 }
 
 async function downloadBackup(req, res) {
+  const id = Number(req.params.id);
   try {
+    const cached = global.backupCache.get(id);
+    if (cached) {
+      res.setHeader("Content-Type", "application/sql");
+      res.setHeader("Content-Disposition", `attachment; filename="${cached.filename}"`);
+      return res.send(Buffer.from(cached.content, "utf8"));
+    }
+
     const { rows } = await pool.query(
       "SELECT filename, file_path FROM backups WHERE id = $1",
-      [req.params.id]
+      [id]
     );
     if (!rows.length) return res.status(404).json({ error: "النسخة الاحتياطية غير موجودة" });
 
     const { filename, file_path } = rows[0];
-    if (!fs.existsSync(file_path)) {
-      return res.status(404).json({ error: "ملف النسخة الاحتياطية غير موجود على الخادم" });
+    if (file_path !== "in-memory" && fs.existsSync(file_path)) {
+      return res.download(path.resolve(file_path), filename);
     }
 
-    res.download(path.resolve(file_path), filename);
+    // Cache expired (or this row was always in-memory-only) — regenerate a
+    // fresh dump rather than 404ing. Not byte-identical to the original, but
+    // keeps the download button working regardless of Railway's ephemeral fs.
+    const fresh = await generateBackupSqlInMemory();
+    res.setHeader("Content-Type", "application/sql");
+    res.setHeader("Content-Disposition", `attachment; filename="${fresh.filename}"`);
+    res.send(Buffer.from(fresh.content, "utf8"));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -124,6 +184,7 @@ async function remove(req, res) {
     }
 
     await pool.query("DELETE FROM backups WHERE id = $1", [req.params.id]);
+    global.backupCache.delete(Number(req.params.id));
     res.json({ deleted: Number(req.params.id) });
   } catch (err) {
     res.status(500).json({ error: err.message });
