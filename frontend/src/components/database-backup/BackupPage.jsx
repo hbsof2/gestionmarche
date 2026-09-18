@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Database, Download, Mail, Info, ShieldAlert, AlertTriangle, Loader2,
 } from "lucide-react";
@@ -10,7 +10,6 @@ import { getAll, createBackup, sendEmail, downloadBackup, remove } from "@/servi
 import { getUser } from "@/lib/auth";
 
 const COLOR = "#1A5276";
-const LAST_EMAIL_KEY = "backup_last_email";
 
 const INFO_ITEMS = [
   "النسخ تُحذف تلقائياً بعد 5 أيام",
@@ -28,8 +27,6 @@ export default function BackupPage({ activeService, onServiceChange }) {
 
   const [creating, setCreating] = useState(false);
   const [sendingCard, setSendingCard] = useState(false);
-  const [cardEmail, setCardEmail] = useState("");
-  const cardEmailRef = useRef(null);
 
   const [emailTarget, setEmailTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -54,15 +51,7 @@ export default function BackupPage({ activeService, onServiceChange }) {
   useEffect(() => {
     if (!isAdmin) return;
     fetchBackups();
-    const lastEmail = localStorage.getItem(LAST_EMAIL_KEY);
-    if (lastEmail) setCardEmail(lastEmail);
   }, [isAdmin]);
-
-  useEffect(() => {
-    if (activeService === "send" && isAdmin) {
-      setTimeout(() => cardEmailRef.current?.focus(), 100);
-    }
-  }, [activeService, isAdmin]);
 
   const handleCreateAndDownload = async () => {
     setCreating(true);
@@ -78,15 +67,12 @@ export default function BackupPage({ activeService, onServiceChange }) {
     }
   };
 
-  const handleCreateAndSend = async (e) => {
-    e.preventDefault();
-    if (!cardEmail.trim()) return;
+  const handleCreateAndSend = async () => {
     setSendingCard(true);
     try {
       const backup = await createBackup();
-      await sendEmail(backup.id, cardEmail.trim());
-      localStorage.setItem(LAST_EMAIL_KEY, cardEmail.trim());
-      showToast(`تم إرسال النسخة الاحتياطية بنجاح إلى ${cardEmail.trim()}`);
+      await sendEmail(backup.id);
+      showToast("تم إرسال النسخة الاحتياطية بنجاح");
       fetchBackups();
     } catch (err) {
       showToast(err.arabicMessage || "فشل إرسال البريد الإلكتروني، تحقق من إعدادات SMTP", "error");
@@ -103,10 +89,9 @@ export default function BackupPage({ activeService, onServiceChange }) {
     }
   };
 
-  const handleSendRowEmail = async (email) => {
-    await sendEmail(emailTarget.id, email);
-    localStorage.setItem(LAST_EMAIL_KEY, email);
-    showToast(`تم إرسال النسخة الاحتياطية بنجاح إلى ${email}`);
+  const handleSendRowEmail = async () => {
+    await sendEmail(emailTarget.id);
+    showToast("تم إرسال النسخة الاحتياطية بنجاح");
     setEmailTarget(null);
     fetchBackups();
   };
@@ -182,29 +167,17 @@ export default function BackupPage({ activeService, onServiceChange }) {
             <Mail size={18} className="text-green-600" />
           </div>
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">إرسال عبر البريد الإلكتروني</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-            إنشاء نسخة وإرسالها مباشرة عبر البريد الإلكتروني
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4 flex-1">
+            سيتم الإرسال إلى البريد الإلكتروني المحدد في إعدادات الخادم
           </p>
-          <form onSubmit={handleCreateAndSend} className="flex flex-col gap-3 flex-1">
-            <input
-              ref={cardEmailRef}
-              type="email"
-              required
-              value={cardEmail}
-              onChange={(e) => setCardEmail(e.target.value)}
-              placeholder="example@email.com"
-              dir="ltr"
-              className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-100 outline-none transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500"
-            />
-            <button
-              type="submit"
-              disabled={sendingCard || !cardEmail.trim()}
-              className="mt-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {sendingCard ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-              {sendingCard ? "جارٍ الإرسال..." : "إنشاء وإرسال"}
-            </button>
-          </form>
+          <button
+            onClick={handleCreateAndSend}
+            disabled={sendingCard}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {sendingCard ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+            {sendingCard ? "جارٍ الإرسال..." : "إنشاء وإرسال"}
+          </button>
         </div>
 
         {/* Card 3 - info */}
@@ -245,7 +218,6 @@ export default function BackupPage({ activeService, onServiceChange }) {
       {emailTarget && (
         <SendBackupEmailModal
           backup={emailTarget}
-          defaultEmail={localStorage.getItem(LAST_EMAIL_KEY) || ""}
           onConfirm={handleSendRowEmail}
           onCancel={() => setEmailTarget(null)}
         />

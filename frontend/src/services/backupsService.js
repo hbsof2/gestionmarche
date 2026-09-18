@@ -11,8 +11,8 @@ export async function createBackup() {
   return data;
 }
 
-export async function sendEmail(backupId, email) {
-  const { data } = await api.post("/api/backups/send-email", { backup_id: backupId, email });
+export async function sendEmail(backupId) {
+  const { data } = await api.post("/api/backups/send-email", { backup_id: backupId });
   return data;
 }
 

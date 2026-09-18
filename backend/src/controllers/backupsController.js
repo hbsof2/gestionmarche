@@ -4,8 +4,6 @@ const pool = require("../config/db");
 const backupDatabase = require("../utils/backupDatabase");
 const sendBackupEmail = require("../utils/sendBackupEmail");
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 function formatFileSize(bytes) {
   if (bytes === null || bytes === undefined) return "-";
   const size = Number(bytes);
@@ -32,10 +30,12 @@ async function createBackup(req, res) {
 }
 
 async function sendBackup(req, res) {
-  const { backup_id, email } = req.body;
+  const { backup_id } = req.body;
   if (!backup_id) return res.status(400).json({ error: "النسخة الاحتياطية مطلوبة" });
-  if (!email?.trim() || !EMAIL_REGEX.test(email.trim())) {
-    return res.status(400).json({ error: "صيغة البريد الإلكتروني غير صحيحة" });
+
+  const toEmail = process.env.SMTP_USER;
+  if (!toEmail) {
+    return res.status(400).json({ error: "لم يتم إعداد البريد الإلكتروني في إعدادات الخادم" });
   }
 
   try {
@@ -50,11 +50,11 @@ async function sendBackup(req, res) {
       return res.status(404).json({ error: "ملف النسخة الاحتياطية غير موجود على الخادم" });
     }
 
-    await sendBackupEmail(file_path, filename, email.trim());
+    await sendBackupEmail(file_path, filename, toEmail);
 
     const { rows: updated } = await pool.query(
       "UPDATE backups SET email_sent_to = $1 WHERE id = $2 RETURNING *",
-      [email.trim(), backup_id]
+      [toEmail, backup_id]
     );
 
     res.json(updated[0]);
