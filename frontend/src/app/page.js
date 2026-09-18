@@ -11,6 +11,8 @@ import InvoicesPage from "@/components/invoices/InvoicesPage";
 import UsersPage from "@/components/users/UsersPage";
 import BackupPage from "@/components/database-backup/BackupPage";
 import FAQPage from "@/components/faq/FAQPage";
+import NotificationsPage from "@/components/notifications/NotificationsPage";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { isAuthenticated, getUser, logout } from "@/lib/auth";
 import {
@@ -39,6 +41,7 @@ import {
   LogOut,
   Home,
   HelpCircle,
+  Bell,
 } from "lucide-react";
 
 const sections = [
@@ -151,6 +154,16 @@ const sections = [
       { id: "search", label: "بحث", icon: Search },
     ],
   },
+  {
+    id: "notifications",
+    label: "الإشعارات",
+    icon: Bell,
+    color: "#E67E22",
+    services: [
+      { id: "all", label: "كل الإشعارات", icon: List },
+      { id: "unread", label: "غير المقروءة", icon: Bell },
+    ],
+  },
 ];
 
 const ROLE_LABEL = { admin: "مدير رئيسي", secondary: "مستخدم ثانوي" };
@@ -256,6 +269,7 @@ export default function Dashboard() {
           >
             <LogOut size={18} />
           </button>
+          <NotificationBell onNavigate={handleSectionClick} />
           <ThemeToggle />
         </div>
       </header>
@@ -426,6 +440,12 @@ export default function Dashboard() {
             <FAQPage
               activeService={activeService}
               onServiceChange={setActiveService}
+            />
+          ) : activeSection === "notifications" ? (
+            <NotificationsPage
+              activeService={activeService}
+              onServiceChange={setActiveService}
+              onNavigate={handleSectionClick}
             />
           ) : !activeService ? (
             /* Welcome / Section Overview */

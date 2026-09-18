@@ -21,10 +21,12 @@ const invoicesRouter          = require("./routes/invoices");
 const usersRouter             = require("./routes/users");
 const backupsRouter           = require("./routes/backups");
 const activityLogsRouter      = require("./routes/activityLogs");
+const notificationsRouter     = require("./routes/notifications");
 
 const pool = require("./config/db");
 const cleanupOldLogs = require("./utils/cleanupLogs");
 const cleanupOldBackups = require("./utils/cleanupBackups");
+const generateNotifications = require("./utils/notificationGenerator");
 
 const app = express();
 
@@ -63,6 +65,7 @@ app.use("/api/invoices",              invoicesRouter);
 app.use("/api/users",                 usersRouter);
 app.use("/api/backups",               backupsRouter);
 app.use("/api/activity-logs",         activityLogsRouter);
+app.use("/api/notifications",         notificationsRouter);
 
 // 404 fallback
 app.use((req, res) => {
@@ -93,3 +96,13 @@ cleanupOldBackups(pool);
 setInterval(() => {
   cleanupOldBackups(pool);
 }, 24 * 60 * 60 * 1000);
+
+// Generate notifications (low stock, expiring deals, backup reminders)
+generateNotifications(pool).catch((err) =>
+  console.error("Notification generation error:", err)
+);
+setInterval(() => {
+  generateNotifications(pool).catch((err) =>
+    console.error("Notification generation error:", err)
+  );
+}, 60 * 60 * 1000);
