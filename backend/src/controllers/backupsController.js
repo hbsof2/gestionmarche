@@ -52,8 +52,13 @@ async function sendBackup(req, res) {
 
     res.json(rows[0]);
   } catch (err) {
-    console.error("Backup email error:", err);
-    res.status(500).json({ error: "فشل إرسال البريد الإلكتروني، تحقق من إعدادات SMTP" });
+    console.error("Send backup full error:", err);
+    console.error("Error code:", err.code);
+    console.error("Error response:", err.response);
+    res.status(500).json({
+      error: "فشل إرسال البريد الإلكتروني، تحقق من إعدادات SMTP",
+      details: err.message,
+    });
   }
 }
 
