@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import DashboardPage from "@/components/dashboard/DashboardPage";
 import RawMaterialsPage from "@/components/raw-materials/RawMaterialsPage";
 import ContractingAuthorityPage from "@/components/contracting-authority/ContractingAuthorityPage";
 import AuthorityBranchesPage from "@/components/authority-branches/AuthorityBranchesPage";
@@ -42,9 +43,17 @@ import {
   Home,
   HelpCircle,
   Bell,
+  LayoutDashboard,
 } from "lucide-react";
 
 const sections = [
+  {
+    id: "dashboard",
+    label: "لوحة الإحصائيات",
+    icon: LayoutDashboard,
+    color: "#1A5276",
+    services: [],
+  },
   {
     id: "raw-materials",
     label: "المواد الأولية",
@@ -170,7 +179,7 @@ const ROLE_LABEL = { admin: "مدير رئيسي", secondary: "مستخدم ثا
 
 export default function Dashboard() {
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState("raw-materials");
+  const [activeSection, setActiveSection] = useState("dashboard");
   const [activeService, setActiveService] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -391,7 +400,9 @@ export default function Dashboard() {
 
         {/* ── Main Content ── */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {activeSection === "raw-materials" ? (
+          {activeSection === "dashboard" ? (
+            <DashboardPage />
+          ) : activeSection === "raw-materials" ? (
             <RawMaterialsPage
               activeService={activeService}
               onServiceChange={setActiveService}

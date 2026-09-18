@@ -23,6 +23,7 @@ const usersRouter             = require("./routes/users");
 const backupsRouter           = require("./routes/backups");
 const activityLogsRouter      = require("./routes/activityLogs");
 const notificationsRouter     = require("./routes/notifications");
+const dashboardRouter         = require("./routes/dashboard");
 
 const pool = require("./config/db");
 const cleanupOldLogs = require("./utils/cleanupLogs");
@@ -67,6 +68,7 @@ app.use("/api/users",                 usersRouter);
 app.use("/api/backups",               backupsRouter);
 app.use("/api/activity-logs",         activityLogsRouter);
 app.use("/api/notifications",         notificationsRouter);
+app.use("/api/dashboard",             dashboardRouter);
 
 // 404 fallback
 app.use((req, res) => {
