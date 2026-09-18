@@ -1,4 +1,5 @@
 // test: verify dev branch ignored by Vercel
+// test: verify dev branch ignored by Vercel 2
 // Polyfill for @supabase/supabase-js realtime-js, which probes for a global
 // WebSocket at createClient() time. Native WebSocket exists on Node 22+, so this
 // guard is a no-op there and only kicks in on older runtimes.
