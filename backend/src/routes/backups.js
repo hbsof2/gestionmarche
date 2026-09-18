@@ -5,9 +5,11 @@ const {
   downloadBackup,
   getAll,
   remove,
+  testSmtp,
 } = require("../controllers/backupsController");
 const { verifyToken, requireAdmin } = require("../middleware/auth");
 
+router.get("/test-smtp", verifyToken, requireAdmin, testSmtp);
 router.get("/", verifyToken, requireAdmin, getAll);
 router.post("/create", verifyToken, requireAdmin, createBackup);
 router.post("/send-email", verifyToken, requireAdmin, sendBackup);

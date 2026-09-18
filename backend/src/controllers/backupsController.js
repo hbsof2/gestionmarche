@@ -76,6 +76,16 @@ async function downloadBackup(req, res) {
   }
 }
 
+async function testSmtp(req, res) {
+  res.json({
+    smtp_host: process.env.SMTP_HOST,
+    smtp_port: process.env.SMTP_PORT,
+    smtp_user: process.env.SMTP_USER,
+    smtp_from: process.env.SMTP_FROM,
+    smtp_pass: process.env.SMTP_PASS ? "موجود ✅" : "غير موجود ❌",
+  });
+}
+
 async function getAll(req, res) {
   try {
     const { rows } = await pool.query(
@@ -115,4 +125,4 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { createBackup, sendBackup, downloadBackup, getAll, remove };
+module.exports = { createBackup, sendBackup, downloadBackup, getAll, remove, testSmtp };
