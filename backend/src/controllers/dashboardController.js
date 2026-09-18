@@ -92,40 +92,54 @@ async function getRecentActivity(req, res) {
 }
 
 async function getAlerts(req, res) {
+  const client = await pool.connect();
   try {
-    const [expiringDeals, lowQuantityMaterials] = await Promise.all([
-      pool.query(`
-        SELECT id, reference, end_date,
-          EXTRACT(DAY FROM end_date - CURRENT_DATE)::int AS days_left,
-          'expiring_deal' AS type
-        FROM deals
-        WHERE end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'
-        ORDER BY end_date ASC
-      `),
-      pool.query(`
-        SELECT
-          rm.name_ar,
-          d.reference AS deal_reference,
-          dis.remaining_qty,
-          dis.initial_max_qty,
-          ROUND((dis.remaining_qty / dis.initial_max_qty) * 100)::int AS percentage,
-          'low_quantity' AS type
-        FROM deal_items_snapshot dis
-        JOIN raw_materials rm ON dis.material_id = rm.id
-        JOIN deals d ON dis.deal_id = d.id
-        WHERE dis.initial_max_qty > 0
-          AND (dis.remaining_qty / dis.initial_max_qty) <= 0.10
-          AND dis.remaining_qty > 0
-        ORDER BY percentage ASC
-      `),
-    ]);
+    // Deals expiring within 30 days.
+    // NOTE: `end_date - CURRENT_DATE` on a DATE column yields a plain
+    // integer in Postgres (not an interval), so EXTRACT(DAY FROM ...)
+    // fails with "function pg_catalog.extract(unknown, integer) does not
+    // exist" — cast the subtraction directly instead.
+    const expiringDeals = await client.query(`
+      SELECT
+        id,
+        reference,
+        end_date,
+        (end_date - CURRENT_DATE)::int AS days_left
+      FROM deals
+      WHERE end_date >= CURRENT_DATE
+        AND end_date <= CURRENT_DATE + INTERVAL '30 days'
+      ORDER BY end_date ASC
+    `);
+
+    // Materials with low remaining quantity (<= 10%)
+    const lowQuantity = await client.query(`
+      SELECT
+        rm.name_ar,
+        d.reference AS deal_reference,
+        dis.remaining_qty::numeric AS remaining_qty,
+        dis.initial_max_qty::numeric AS initial_max_qty,
+        ROUND((dis.remaining_qty / NULLIF(dis.initial_max_qty, 0)) * 100)::int AS percentage
+      FROM deal_items_snapshot dis
+      JOIN raw_materials rm ON dis.material_id = rm.id
+      JOIN deals d ON dis.deal_id = d.id
+      WHERE dis.initial_max_qty > 0
+        AND dis.remaining_qty > 0
+        AND (dis.remaining_qty / NULLIF(dis.initial_max_qty, 0)) <= 0.10
+      ORDER BY percentage ASC
+    `);
 
     res.json({
       expiring_deals: expiringDeals.rows,
-      low_quantity_materials: lowQuantityMaterials.rows,
+      low_quantity_materials: lowQuantity.rows,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("getAlerts error:", error);
+    res.status(500).json({
+      error: "فشل تحميل التنبيهات",
+      details: error.message,
+    });
+  } finally {
+    client.release();
   }
 }
 
