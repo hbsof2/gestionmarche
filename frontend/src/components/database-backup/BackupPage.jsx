@@ -70,11 +70,19 @@ export default function BackupPage({ activeService, onServiceChange }) {
   const handleCreateAndSend = async () => {
     setSendingCard(true);
     try {
+      console.log("Step 1: Creating backup...");
       const backup = await createBackup();
-      await sendEmail(backup.id);
+      console.log("Backup created:", backup);
+
+      console.log("Step 2: Sending email for backup id:", backup.id);
+      const result = await sendEmail(backup.id);
+      console.log("Send result:", result);
+
       showToast("تم إرسال النسخة الاحتياطية بنجاح");
       fetchBackups();
     } catch (err) {
+      console.error("Error in handleCreateAndSend:", err);
+      console.error("Error response:", err.response?.data);
       showToast(err.arabicMessage || "فشل إرسال البريد الإلكتروني، تحقق من إعدادات SMTP", "error");
     } finally {
       setSendingCard(false);
