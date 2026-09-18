@@ -61,6 +61,23 @@ Verify both layers are running:
 - `GET http://localhost:3000/api/test-connection` — Supabase connectivity check
 - `GET http://localhost:5000/api/health` — backend heartbeat
 
+## Git Workflow
+
+Two long-lived branches: `main` is production — both Vercel and Railway are configured to auto-deploy from it — and `dev` is where day-to-day work happens. **Never push directly to `main`.**
+
+```bash
+# Development
+git add .
+git commit -m "..."
+git push origin dev
+
+# Ship to production
+git checkout main
+git merge dev        # fast-forward as long as main hasn't diverged
+git push origin main # triggers the Vercel + Railway deploy
+git checkout dev
+```
+
 ## Architecture
 
 ### Frontend (`frontend/src/`)
